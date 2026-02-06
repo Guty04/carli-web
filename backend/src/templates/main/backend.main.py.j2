@@ -1,0 +1,55 @@
+"""{{ project_name }} - FastAPI Application Entry Point."""
+
+import logfire
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from scalar_fastapi import get_scalar_api_reference # type: ignore
+
+from src.configurations.config import Settings
+from src.enums.environment import Environment
+
+settings = Settings()
+
+logfire.configure()
+
+app = FastAPI(
+    title=settings.APP_NAME,
+    description="API for {{ project_name }}",
+    version="0.0.1",
+    docs_url="/swagger" if settings.ENVIRONMENT == Environment.DEVELOPMENT else None,
+    redoc_url="/redoc" if settings.ENVIRONMENT == Environment.DEVELOPMENT else None,
+    openapi_url="/openapi.json" if settings.ENVIRONMENT == Environment.DEVELOPMENT else None,
+)
+
+logfire.instrument_fastapi(app)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGIN,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/health", tags=["Health"])
+async def health_check() -> dict[str, str]:
+    """Health check endpoint."""
+    return {"status": "healthy", "environment": settings.ENVIRONMENT}
+
+
+@app.get("/", tags=["Root"])
+async def root() -> dict[str, str]:
+    """Root endpoint."""
+    return {"message": f"Welcome to {settings.APP_NAME}"}
+
+if settings.ENVIRONMENT == Environment.DEVELOPMENT:
+
+    @app.get("/docs", include_in_schema=False)
+    async def scalar_docs() -> HTMLResponse:
+        """Scalar API documentation."""
+        return get_scalar_api_reference(
+            openapi_url=app.openapi_url or "/openapi.json",
+            title=app.title,
+        )

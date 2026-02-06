@@ -1,0 +1,84 @@
+# {{ project_name }} - Agent Instructions
+
+This document provides instructions for AI agents working with this codebase.
+
+## Project Overview
+
+- **Type**: FastAPI Backend
+- **Language**: Python 3.13+
+- **Package Manager**: uv
+
+## Architecture
+
+This project follows a **layered architecture**:
+
+```
+src/
+├── routes/          # HTTP layer - receives requests, returns responses
+├── services/        # Business logic layer
+├── repositories/    # Data access layer
+├── schemas/         # Pydantic models for validation
+├── database/models/ # SQLAlchemy ORM models
+└── configurations/  # Settings and configuration
+```
+
+### Data Flow
+```
+Request → Route → Service → Repository → Database
+                    ↓
+              Response ← Schema validation
+```
+
+## Conventions
+
+### Naming
+- **Files**: `snake_case.py`
+- **Classes**: `PascalCase`
+- **Functions/Variables**: `snake_case`
+- **Constants**: `UPPER_SNAKE_CASE`
+
+### File Organization
+- One model/schema/repository per file
+- Group related functionality in the same directory
+- Use `__init__.py` to expose public interfaces
+
+### API Design
+- Use Pydantic schemas for request/response validation
+- Raise custom exceptions from `errors/` directory
+- Use dependency injection for services
+
+## Key Commands
+
+```bash
+# Run development server
+uv run uvicorn src.main:app --reload
+
+# Run tests
+uv run pytest
+
+# Format and lint
+uv run ruff format . && uv run ruff check . --fix
+
+# Type check
+uv run mypy src/
+```
+
+## Important Files
+
+- `src/main.py` - Application entry point
+- `src/configurations/settings.py` - Environment configuration
+- `pyproject.toml` - Dependencies and tool configuration
+
+## Do's and Don'ts
+
+✅ **Do**:
+- Write tests for new features
+- Use type hints everywhere
+- Follow existing patterns
+- Run pre-commit before committing
+
+❌ **Don't**:
+- Put business logic in routes
+- Skip validation with Pydantic
+- Commit without running tests
+- Ignore type errors
