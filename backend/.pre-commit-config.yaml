@@ -47,3 +47,12 @@ repos:
     hooks:
       - id: hadolint
         args: ["--ignore=DL3013"]
+
+  - repo: local
+    hooks:
+      - id: gga
+        name: Gentleman Guardian Angel
+        entry: gga run
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]

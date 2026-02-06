@@ -1,6 +1,6 @@
 # 🤖 Agent Instructions
 
-This document provides instructions for AI agents working with this codebase.  
+This document provides instructions for AI agents working with this codebase.
 The goal is to ensure clean architecture, maintainable code, and zero hallucinated logic.
 
 ---
@@ -206,6 +206,29 @@ def create_user(data: dict):
 
 ```python
 def create_user(email: str, full_name: str, is_active: bool):
+```
+
+---
+
+## 📊 Logging Rules
+
+All logging MUST use `logfire` instead of the standard `logging` module.
+
+- `logfire` is already configured at the application level in `main.py`
+- Use structured logging with named parameters
+
+```python
+import logfire
+
+logfire.info("Project '{project_name}' created", project_name=name)
+logfire.error("Operation failed for '{resource}'", resource=name)
+```
+
+MUST NOT use:
+
+```python
+import logging
+logger = logging.getLogger(__name__)
 ```
 
 ---

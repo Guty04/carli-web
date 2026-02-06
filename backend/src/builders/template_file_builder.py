@@ -37,7 +37,7 @@ class BackendBuilder(TemplateInterfaceBuilder):
             ".vscode/launch.json": "debug/backend.launch.json.j2",
             "example.env": "env/backend.example.env.j2",
             "alembic.ini": "alembic/backend.alembic.ini.j2",  # TODO: Agregar los archivos de alembic
-        }  # TODO: agregar al README la instalacion de GGA y de pre-commit
+        }
 
         for file_path, template in root_templates.items():
             files[file_path] = self._render(template_path=template, data=data)

@@ -5,5 +5,5 @@ from .project import Member
 
 class BuilderProjectData(BaseModel):
     project_name: str
-    github_url: str
+    url_repository: str
     codeowners: list[Member]

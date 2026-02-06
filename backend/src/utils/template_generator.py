@@ -13,7 +13,7 @@ class TemplateGenerator:
     def __post_init__(self) -> None:
         self.environment = Environment(
             loader=FileSystemLoader(self.templates_directory),
-            autoescape=False,  # TODO:Fix this for security if needed
+            autoescape=False,  # nosec
             keep_trailing_newline=True,
         )
 

@@ -12,6 +12,9 @@ from src.routes import auth_router, project_router
 
 logfire.configure()
 
+# TODO: Add Sentry integration for error tracking
+# setup correctly .toml for use with pre-commit hooks
+
 app = FastAPI(
     title=configuration.APP_NAME,
     description="API for backend",

@@ -1,10 +1,14 @@
 from dataclasses import dataclass
 from uuid import UUID
 
+import logfire
+
 from src.builders import TemplateInterfaceBuilder
 from src.database.models import Project
+from src.errors import SonarQubeError
 from src.integrations.gitlab import AccessLevel, GitLabClient
 from src.integrations.gitlab.schemas import GitLabProject
+from src.integrations.sonarqube import SonarQubeClient
 from src.repositories import ProjectRepository
 from src.schemas import Member, ProjectCreated, ProjectDetail, ProjectSummary
 from src.schemas.builder import BuilderProjectData
@@ -19,30 +23,53 @@ ROLE_TO_ACCESS_LEVEL: dict[str, AccessLevel] = {
 @dataclass
 class ProjectService:
     gitlab: GitLabClient
+    sonarqube: SonarQubeClient
     repository: ProjectRepository
     template_builder: TemplateInterfaceBuilder
 
     async def create_project(
         self, project: ProjectDetail, user_id: UUID
     ) -> ProjectCreated:
+        gitlab_project: GitLabProject = await self._setup_gitlab_project(project)
+
+        try:
+            await self._setup_sonarqube_project(project.name)
+        except SonarQubeError:
+            logfire.error(
+                "SonarQube setup failed for project '{project_name}' "
+                "(GitLab project {gitlab_project_id} was already created)",
+                project_name=project.name,
+                gitlab_project_id=gitlab_project.id,
+            )
+            raise
+
+        db_project: Project = await self.repository.create(
+            name=project.name,
+            id_user=user_id,
+            id_project_gitlab=gitlab_project.id,
+            url_repository=gitlab_project.ssh_url_to_repo,
+        )
+
+        return ProjectCreated(
+            repo_url=gitlab_project.ssh_url_to_repo, project_id=db_project.id
+        )
+
+    async def _setup_gitlab_project(self, project: ProjectDetail) -> GitLabProject:
         gitlab_project: GitLabProject = await self.gitlab.create_project(
             name=project.name,
-            namespace_id=self._get_namespace_id(),
             visibility="private",
             initialize_with_readme=False,
         )
 
-        template_data = BuilderProjectData(
-            project_name=project.name,
-            github_url=gitlab_project.ssh_url_to_repo,
-            codeowners=project.members,
-        )
-
         files: dict[str, str] = self.template_builder.build(
-            data=template_data,
+            data=BuilderProjectData(
+                project_name=project.name,
+                url_repository=gitlab_project.ssh_url_to_repo,
+                codeowners=project.members,
+            ),
         )
 
-        await self.gitlab.inicialize_repository(
+        await self.gitlab.initialize_repository(
             project_id=gitlab_project.id,
             files=files,
             commit_message="chore: initial project setup",
@@ -62,15 +89,19 @@ class ProjectService:
 
         await self._add_members(project_id=gitlab_project.id, members=project.members)
 
-        db_project: Project = await self.repository.create(
-            name=project.name,
-            id_user=user_id,
-            id_project_gitlab=gitlab_project.id,
-            url_repository=gitlab_project.ssh_url_to_repo,
+        return gitlab_project
+
+    async def _setup_sonarqube_project(self, project_name: str) -> None:
+        project_key: str = project_name.lower().replace(" ", "-")
+
+        await self.sonarqube.create_project(
+            project_name=project_name,
+            project_key=project_key,
         )
 
-        return ProjectCreated(
-            repo_url=gitlab_project.ssh_url_to_repo, project_id=db_project.id
+        await self.sonarqube.generate_project_token(
+            project_key=project_key,
+            token_name=f"{project_key}-token",
         )
 
     async def list_projects(self, user_id: UUID) -> list[ProjectSummary]:
@@ -130,8 +161,3 @@ class ProjectService:
                 user_name=member.gitlab_user_name,
                 access_level=access_level,
             )
-
-    def _get_namespace_id(self) -> int:
-        from src.configurations import configuration
-
-        return configuration.GITLAB_NAMESPACE_ID

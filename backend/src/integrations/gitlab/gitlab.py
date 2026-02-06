@@ -25,13 +25,13 @@ from .schemas import (
 @dataclass
 class GitLabClient:
     base_url: str
-    private_token: str
+    private_token: str  # GITLAB_NAMESPACE_ID
+    gitlab_namespace_id: int
     timeout: int = 30
 
     async def create_project(
         self,
         name: str,
-        namespace_id: int,
         visibility: str,
         initialize_with_readme: bool,
     ) -> GitLabProject:
@@ -43,7 +43,7 @@ class GitLabClient:
                     url=url,
                     json={
                         "name": name,
-                        "namespace_id": namespace_id,
+                        "namespace_id": self.gitlab_namespace_id,
                         "visibility": visibility,
                         "initialize_with_readme": initialize_with_readme,
                     },
@@ -120,7 +120,7 @@ class GitLabClient:
         except RequestError as e:
             raise GitLabAPIError(f"Request failed: {str(e)}") from e
 
-    async def inicialize_repository(
+    async def initialize_repository(
         self,
         project_id: int,
         files: dict[str, str],
