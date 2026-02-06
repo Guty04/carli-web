@@ -103,8 +103,8 @@ class GitLabClient:
                     url,
                     json={
                         "name": branch_name,
-                        "push_access_level": push_access_level,
-                        "merge_access_level": merge_access_level,
+                        "push_access_level": push_access_level.value,
+                        "merge_access_level": merge_access_level.value,
                         "allow_force_push": allow_force_push,
                     },
                     headers=self._headers(),
@@ -192,7 +192,7 @@ class GitLabClient:
             raise GitLabAPIError(f"Request failed: {str(e)}") from e
 
     async def add_member_to_project(
-        self, project_id: int, user_id: int, access_level: AccessLevel
+        self, project_id: int, user_name: str, access_level: AccessLevel
     ) -> GitLabMember:
         url: str = urljoin(self.base_url, f"projects/{project_id}/members")
 
@@ -200,13 +200,34 @@ class GitLabClient:
             async with AsyncClient(timeout=self.timeout) as client:
                 response: Response = await client.post(
                     url,
-                    json={"user_id": user_id, "access_level": access_level},
+                    json={"user_name": user_name, "access_level": access_level.value},
                     headers=self._headers(),
                 )
 
                 response.raise_for_status()
 
                 return GitLabMember.model_validate(response.json())
+
+        except HTTPStatusError as e:
+            raise self._handle_http_error(e) from e
+
+        except RequestError as e:
+            raise GitLabAPIError(f"Request failed: {str(e)}") from e
+
+    async def search_users(self, search: str) -> list[GitLabUser]:
+        url: str = urljoin(self.base_url, "users")
+
+        try:
+            async with AsyncClient(timeout=self.timeout) as client:
+                response: Response = await client.get(
+                    url,
+                    params={"search": search},
+                    headers=self._headers(),
+                )
+
+                response.raise_for_status()
+
+                return [GitLabUser.model_validate(u) for u in response.json()]
 
         except HTTPStatusError as e:
             raise self._handle_http_error(e) from e

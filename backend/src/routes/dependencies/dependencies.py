@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
@@ -6,6 +7,7 @@ from fastapi.security import OAuth2PasswordBearer, SecurityScopes
 from jwt import InvalidTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.builders import BackendBuilder
 from src.configurations import configuration
 from src.database import database
 from src.database.models import User
@@ -14,6 +16,7 @@ from src.integrations import GitLabClient
 from src.repositories import AuthRepository, ProjectRepository
 from src.services import AuthService, ProjectService
 from src.utils import decode_access_token
+from src.utils.template_generator import TemplateGenerator
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
@@ -67,11 +70,20 @@ def get_gitlab_client() -> GitLabClient:
     )
 
 
+def get_backend_builder() -> BackendBuilder:
+    templates_directory: Path = Path(__file__).parent.parent.parent / "templates"
+    template_generator = TemplateGenerator(templates_directory=templates_directory)
+    return BackendBuilder(template_generator=template_generator)
+
+
 def get_project_service(
     session: AsyncSession = Depends(dependency=database.get_async_session),
     gitlab_client: GitLabClient = Depends(dependency=get_gitlab_client),
+    backend_builder: BackendBuilder = Depends(dependency=get_backend_builder),
 ) -> ProjectService:
+
     return ProjectService(
         gitlab=gitlab_client,
         repository=ProjectRepository(session=session),
+        template_builder=backend_builder,
     )

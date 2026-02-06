@@ -1,11 +1,13 @@
 from dataclasses import dataclass
 from uuid import UUID
 
+from src.builders import TemplateInterfaceBuilder
 from src.database.models import Project
 from src.integrations.gitlab import AccessLevel, GitLabClient
 from src.integrations.gitlab.schemas import GitLabProject
 from src.repositories import ProjectRepository
 from src.schemas import Member, ProjectCreated, ProjectDetail, ProjectSummary
+from src.schemas.builder import BuilderProjectData
 
 ROLE_TO_ACCESS_LEVEL: dict[str, AccessLevel] = {
     "developer": AccessLevel.DEVELOPER,
@@ -18,6 +20,7 @@ ROLE_TO_ACCESS_LEVEL: dict[str, AccessLevel] = {
 class ProjectService:
     gitlab: GitLabClient
     repository: ProjectRepository
+    template_builder: TemplateInterfaceBuilder
 
     async def create_project(
         self, project: ProjectDetail, user_id: UUID
@@ -29,7 +32,21 @@ class ProjectService:
             initialize_with_readme=False,
         )
 
-        # TODO: build template files and initial commit via TemplateFileBuilder
+        template_data = BuilderProjectData(
+            project_name=project.name,
+            github_url=gitlab_project.ssh_url_to_repo,
+            codeowners=project.members,
+        )
+
+        files: dict[str, str] = self.template_builder.build(
+            data=template_data,
+        )
+
+        await self.gitlab.inicialize_repository(
+            project_id=gitlab_project.id,
+            files=files,
+            commit_message="chore: initial project setup",
+        )
 
         await self.gitlab.create_branch(
             project_id=gitlab_project.id,
@@ -37,11 +54,13 @@ class ProjectService:
             from_branch="main",
         )
 
-        await self._protect_branches(gitlab_project.id)
+        await self._protect_branches(project_id=gitlab_project.id)
 
-        await self.gitlab.configure_merge_request_approvals(gitlab_project.id)
+        await self.gitlab.configure_merge_request_approvals(
+            project_id=gitlab_project.id
+        )
 
-        await self._add_members(gitlab_project.id, project.members)
+        await self._add_members(project_id=gitlab_project.id, members=project.members)
 
         db_project: Project = await self.repository.create(
             name=project.name,
@@ -56,6 +75,18 @@ class ProjectService:
 
     async def list_projects(self, user_id: UUID) -> list[ProjectSummary]:
         projects: list[Project] = await self.repository.list_by_user(user_id)
+        return [
+            ProjectSummary(
+                id=project.id,
+                name=project.name,
+                url_repository=project.url_repository,
+                created_at=project.created_at,
+            )
+            for project in projects
+        ]
+
+    async def list_all_projects(self) -> list[ProjectSummary]:
+        projects: list[Project] = await self.repository.list_all_repositories()
         return [
             ProjectSummary(
                 id=project.id,
@@ -96,7 +127,7 @@ class ProjectService:
             )
             await self.gitlab.add_member_to_project(
                 project_id=project_id,
-                user_id=member.gitlab_user_id,
+                user_name=member.gitlab_user_name,
                 access_level=access_level,
             )
 

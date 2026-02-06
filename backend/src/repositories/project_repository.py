@@ -41,3 +41,9 @@ class ProjectRepository:
             statement=select(Project).where(Project.id_user == user_id)
         )
         return list(result.scalars().all())
+
+    async def list_all_repositories(self) -> list[Project]:
+        result: Result[Tuple[Project]] = await self.session.execute(
+            statement=select(Project)
+        )
+        return list(result.scalars().all())

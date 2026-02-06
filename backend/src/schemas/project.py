@@ -7,7 +7,7 @@ from src.enums import Project
 
 
 class Member(BaseModel):
-    gitlab_user_id: int
+    gitlab_user_name: str
     role: str
 
 
