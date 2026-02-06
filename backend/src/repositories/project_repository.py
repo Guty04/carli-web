@@ -19,7 +19,6 @@ class ProjectRepository:
         id_project_gitlab: int,
         url_repository: str,
     ) -> Project:
-
         project = Project(
             name=name,
             id_user=id_user,

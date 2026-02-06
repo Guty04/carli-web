@@ -81,7 +81,6 @@ def get_project_service(
     gitlab_client: GitLabClient = Depends(dependency=get_gitlab_client),
     backend_builder: BackendBuilder = Depends(dependency=get_backend_builder),
 ) -> ProjectService:
-
     return ProjectService(
         gitlab=gitlab_client,
         repository=ProjectRepository(session=session),

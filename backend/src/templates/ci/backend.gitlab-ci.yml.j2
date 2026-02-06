@@ -129,7 +129,7 @@ migrate:staging:
     DATABASE_URL: $STAGING_DATABASE_URL
   rules:
     - if: $CI_COMMIT_BRANCH == "develop"
- 
+
 migrate:production:
   extends: .migrate-base
   environment:
