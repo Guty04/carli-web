@@ -21,6 +21,7 @@ class BackendBuilder(TemplateInterfaceBuilder):
         files.update(self.build_ci_files(data))
         files.update(self.build_package_files(data))
         files.update(self.build_source_files(data))
+        files.update(self.build_alembic_files())
         files.update(self.build_init_files())
         files.update(self.build_test_files())
 
@@ -36,7 +37,7 @@ class BackendBuilder(TemplateInterfaceBuilder):
             ".pre-commit-config.yaml": "pre-commit/backend.pre-commit.yaml.j2",
             ".vscode/launch.json": "debug/backend.launch.json.j2",
             "example.env": "env/backend.example.env.j2",
-            "alembic.ini": "alembic/backend.alembic.ini.j2",  # TODO: Agregar los archivos de alembic
+            "alembic.ini": "alembic/backend.alembic.ini.j2",
         }
 
         for file_path, template in root_templates.items():
@@ -77,6 +78,20 @@ class BackendBuilder(TemplateInterfaceBuilder):
 
         for file_path, template in source_templates.items():
             files[file_path] = self._render(template_path=template, data=data)
+
+        return files
+
+    def build_alembic_files(self) -> dict[str, str]:
+        alembic_templates: dict[str, str] = {
+            "migrations/env.py": "alembic/backend.env.py.j2",
+            "migrations/script.py.mako": "alembic/backend.script.py.mako.j2",
+        }
+
+        files: dict[str, str] = {}
+        for file_path, template in alembic_templates.items():
+            files[file_path] = self._render(template_path=template)
+
+        files["migrations/versions/.gitkeep"] = ""
 
         return files
 

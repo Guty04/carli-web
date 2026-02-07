@@ -25,13 +25,11 @@ class AuthService:
 
         return Token(access_token=access_token)
 
-    async def get_current_user(
-        self, access_token: str, required_scopes: set[str]
-    ) -> User:
+    async def get_current_user(self, access_token: str, required_scopes: set[str]) -> User:
         try:
             payload: dict[str, Any] = decode_access_token(token=access_token)
-        except InvalidTokenError:
-            raise AuthenticationError()
+        except InvalidTokenError as token_error:
+            raise AuthenticationError() from token_error
 
         user_id: str | None = payload.get("sub")
         if user_id is None:
@@ -41,9 +39,7 @@ class AuthService:
         if user is None:
             raise AuthenticationError()
 
-        user_permissions: set[str] = {
-            permission.name for permission in user.role.permissions
-        }
+        user_permissions: set[str] = {permission.name for permission in user.role.permissions}
 
         if not required_scopes.issubset(user_permissions):
             raise AuthorizationError()

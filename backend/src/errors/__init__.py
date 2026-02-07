@@ -5,6 +5,11 @@ from .gitlab import (
     GitLabError,
     GitLabNotFoundError,
 )
+from .logfire import (
+    LogfireAPIError,
+    LogfireAuthenticationError,
+    LogfireError,
+)
 from .sonarqube import (
     SonarQubeAPIError,
     SonarQubeAuthenticationError,
@@ -19,6 +24,9 @@ __all__: list[str] = [
     "GitLabAuthenticationError",
     "GitLabError",
     "GitLabNotFoundError",
+    "LogfireAPIError",
+    "LogfireAuthenticationError",
+    "LogfireError",
     "SonarQubeAPIError",
     "SonarQubeAuthenticationError",
     "SonarQubeError",

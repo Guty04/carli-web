@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Security, status
 
 from src.database.models import User
 from src.enums import Permission
-from src.errors import GitLabError
+from src.errors import GitLabError, LogfireError
 from src.schemas import ProjectCreated, ProjectDetail, ProjectSummary
 from src.services import ProjectService
 
@@ -26,7 +26,7 @@ async def create_project(
             project=project, user_id=current_user.id
         )
 
-    except GitLabError as e:
+    except (GitLabError, LogfireError) as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),

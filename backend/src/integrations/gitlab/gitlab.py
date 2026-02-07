@@ -25,7 +25,7 @@ from .schemas import (
 @dataclass
 class GitLabClient:
     base_url: str
-    private_token: str  # GITLAB_NAMESPACE_ID
+    private_token: str
     gitlab_namespace_id: int
     timeout: int = 30
 
@@ -60,12 +60,8 @@ class GitLabClient:
         except RequestError as e:
             raise GitLabAPIError(f"Request failed: {str(e)}") from e
 
-    async def create_branch(
-        self, project_id: int, branch_name: str, from_branch: str
-    ) -> GitLabBranch:
-        url: str = urljoin(
-            base=self.base_url, url=f"projects/{project_id}/repository/branches"
-        )
+    async def create_branch(self, project_id: int, branch_name: str, from_branch: str) -> GitLabBranch:
+        url: str = urljoin(base=self.base_url, url=f"projects/{project_id}/repository/branches")
 
         try:
             async with AsyncClient(timeout=self.timeout) as client:
@@ -93,9 +89,7 @@ class GitLabClient:
         merge_access_level: AccessLevel,
         allow_force_push: bool = False,
     ) -> GitLabProtectedBranch:
-        url: str = urljoin(
-            base=self.base_url, url=f"projects/{project_id}/protected_branches"
-        )
+        url: str = urljoin(base=self.base_url, url=f"projects/{project_id}/protected_branches")
 
         try:
             async with AsyncClient(timeout=self.timeout) as client:
@@ -126,9 +120,7 @@ class GitLabClient:
         files: dict[str, str],
         commit_message: str,
     ) -> GitLabCommit:
-        url: str = urljoin(
-            base=self.base_url, url=f"projects/{project_id}/repository/commits"
-        )
+        url: str = urljoin(base=self.base_url, url=f"projects/{project_id}/repository/commits")
 
         actions: list[dict[str, str]] = [
             {
@@ -191,9 +183,7 @@ class GitLabClient:
         except RequestError as e:
             raise GitLabAPIError(f"Request failed: {str(e)}") from e
 
-    async def add_member_to_project(
-        self, project_id: int, user_name: str, access_level: AccessLevel
-    ) -> GitLabMember:
+    async def add_member_to_project(self, project_id: int, user_name: str, access_level: AccessLevel) -> GitLabMember:
         url: str = urljoin(self.base_url, f"projects/{project_id}/members")
 
         try:
@@ -260,8 +250,7 @@ class GitLabClient:
         if error.response.status_code == 401:
             return GitLabAuthenticationError()
 
-        elif error.response.status_code == 404:
+        if error.response.status_code == 404:
             return GitLabNotFoundError()
 
-        else:
-            return GitLabAPIError()
+        return GitLabAPIError()

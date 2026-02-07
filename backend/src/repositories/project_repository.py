@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Tuple
 from uuid import UUID
 
 from sqlalchemy import Result, select
@@ -30,19 +29,17 @@ class ProjectRepository:
         return project
 
     async def get_by_id(self, project_id: UUID) -> Project | None:
-        result: Result[Tuple[Project]] = await self.session.execute(
+        result: Result[tuple[Project]] = await self.session.execute(
             statement=select(Project).where(Project.id == project_id)
         )
         return result.scalar_one_or_none()
 
     async def list_by_user(self, user_id: UUID) -> list[Project]:
-        result: Result[Tuple[Project]] = await self.session.execute(
+        result: Result[tuple[Project]] = await self.session.execute(
             statement=select(Project).where(Project.id_user == user_id)
         )
         return list(result.scalars().all())
 
     async def list_all_repositories(self) -> list[Project]:
-        result: Result[Tuple[Project]] = await self.session.execute(
-            statement=select(Project)
-        )
+        result: Result[tuple[Project]] = await self.session.execute(statement=select(Project))
         return list(result.scalars().all())

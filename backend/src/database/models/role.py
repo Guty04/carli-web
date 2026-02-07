@@ -1,5 +1,3 @@
-from typing import Set
-
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -12,10 +10,6 @@ class Role(Base):
     __table_args__ = {"comment": "Platform roles (Admin, PM)"}
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(
-        String(50), unique=True, comment="Role display name"
-    )
+    name: Mapped[str] = mapped_column(String(50), unique=True, comment="Role display name")
 
-    permissions: Mapped[Set[Permission]] = relationship(
-        secondary="role_x_permission", lazy="joined"
-    )
+    permissions: Mapped[set[Permission]] = relationship(secondary="role_x_permission", lazy="joined")

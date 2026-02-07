@@ -35,13 +35,11 @@ app.add_middleware(
 
 @app.get("/health", tags=["Health"])
 async def health_check() -> dict[str, str]:
-    """Health check endpoint."""
     return {"status": "healthy", "environment": settings.ENVIRONMENT}
 
 
 @app.get("/", tags=["Root"])
 async def root() -> dict[str, str]:
-    """Root endpoint."""
     return {"message": f"Welcome to {settings.APP_NAME}"}
 
 if settings.ENVIRONMENT == Environment.DEVELOPMENT:

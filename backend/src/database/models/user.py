@@ -1,4 +1,3 @@
-from typing import Set
 from uuid import UUID
 
 from sqlalchemy import UUID as SQLUUID
@@ -21,16 +20,12 @@ class User(Base):
     )
     name: Mapped[str] = mapped_column(String(100), comment="First name")
     lastname: Mapped[str] = mapped_column(String(100), comment="Last name")
-    email: Mapped[str] = mapped_column(
-        String(255), index=True, unique=True, comment="Login email"
-    )
+    email: Mapped[str] = mapped_column(String(255), index=True, unique=True, comment="Login email")
     password: Mapped[str] = mapped_column(String(255), comment="Argon2-hashed password")
-    id_role: Mapped[int] = mapped_column(
-        ForeignKey("role.id"), comment="FK to assigned role"
-    )
+    id_role: Mapped[int] = mapped_column(ForeignKey("role.id"), comment="FK to assigned role")
 
     role: Mapped[Role] = relationship(lazy="joined")
-    projects: Mapped[Set[Project]] = relationship(
+    projects: Mapped[set[Project]] = relationship(
         "Project",
         primaryjoin="User.id == Project.id_user",
     )

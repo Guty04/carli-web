@@ -1,5 +1,3 @@
-"""backend - FastAPI Application Entry Point."""
-
 import logfire
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,22 +10,14 @@ from src.routes import auth_router, project_router
 
 logfire.configure()
 
-# TODO: Add Sentry integration for error tracking
-# setup correctly .toml for use with pre-commit hooks
 
 app = FastAPI(
     title=configuration.APP_NAME,
     description="API for backend",
     version="0.0.1",
-    docs_url="/swagger"
-    if configuration.ENVIRONMENT == Environment.DEVELOPMENT
-    else None,
-    redoc_url="/redoc"
-    if configuration.ENVIRONMENT == Environment.DEVELOPMENT
-    else None,
-    openapi_url="/openapi.json"
-    if configuration.ENVIRONMENT == Environment.DEVELOPMENT
-    else None,
+    docs_url="/swagger" if configuration.ENVIRONMENT == Environment.DEVELOPMENT else None,
+    redoc_url="/redoc" if configuration.ENVIRONMENT == Environment.DEVELOPMENT else None,
+    openapi_url="/openapi.json" if configuration.ENVIRONMENT == Environment.DEVELOPMENT else None,
 )
 
 logfire.instrument_fastapi(app)

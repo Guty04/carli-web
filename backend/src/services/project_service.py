@@ -5,13 +5,12 @@ import logfire
 
 from src.builders import TemplateInterfaceBuilder
 from src.database.models import Project
-from src.errors import SonarQubeError
-from src.integrations.gitlab import AccessLevel, GitLabClient
-from src.integrations.gitlab.schemas import GitLabProject
+from src.errors import LogfireError, SonarQubeError
+from src.integrations.gitlab import AccessLevel, GitLabClient, GitLabProject
+from src.integrations.logfire import LogfireClient, LogfireProject
 from src.integrations.sonarqube import SonarQubeClient
 from src.repositories import ProjectRepository
-from src.schemas import Member, ProjectCreated, ProjectDetail, ProjectSummary
-from src.schemas.builder import BuilderProjectData
+from src.schemas import BuilderProjectData, Member, ProjectCreated, ProjectDetail, ProjectSummary
 
 ROLE_TO_ACCESS_LEVEL: dict[str, AccessLevel] = {
     "developer": AccessLevel.DEVELOPER,
@@ -24,19 +23,31 @@ ROLE_TO_ACCESS_LEVEL: dict[str, AccessLevel] = {
 class ProjectService:
     gitlab: GitLabClient
     sonarqube: SonarQubeClient
+    logfire: LogfireClient
     repository: ProjectRepository
     template_builder: TemplateInterfaceBuilder
 
-    async def create_project(
-        self, project: ProjectDetail, user_id: UUID
-    ) -> ProjectCreated:
+    async def create_project(self, project: ProjectDetail, user_id: UUID) -> ProjectCreated:
         gitlab_project: GitLabProject = await self._setup_gitlab_project(project)
 
         try:
-            await self._setup_sonarqube_project(project.name)
+            await self._setup_sonarqube_project(project_name=project.name)
+
         except SonarQubeError:
             logfire.error(
                 "SonarQube setup failed for project '{project_name}' "
+                "(GitLab project {gitlab_project_id} was already created)",
+                project_name=project.name,
+                gitlab_project_id=gitlab_project.id,
+            )
+            raise
+
+        try:
+            await self._setup_logfire_project(project_name=project.name)
+
+        except LogfireError:
+            logfire.error(
+                "Logfire setup failed for project '{project_name}' "
                 "(GitLab project {gitlab_project_id} was already created)",
                 project_name=project.name,
                 gitlab_project_id=gitlab_project.id,
@@ -50,9 +61,7 @@ class ProjectService:
             url_repository=gitlab_project.ssh_url_to_repo,
         )
 
-        return ProjectCreated(
-            repo_url=gitlab_project.ssh_url_to_repo, project_id=db_project.id
-        )
+        return ProjectCreated(repo_url=gitlab_project.ssh_url_to_repo, project_id=db_project.id)
 
     async def _setup_gitlab_project(self, project: ProjectDetail) -> GitLabProject:
         gitlab_project: GitLabProject = await self.gitlab.create_project(
@@ -83,9 +92,7 @@ class ProjectService:
 
         await self._protect_branches(project_id=gitlab_project.id)
 
-        await self.gitlab.configure_merge_request_approvals(
-            project_id=gitlab_project.id
-        )
+        await self.gitlab.configure_merge_request_approvals(project_id=gitlab_project.id)
 
         await self._add_members(project_id=gitlab_project.id, members=project.members)
 
@@ -103,6 +110,10 @@ class ProjectService:
             project_key=project_key,
             token_name=f"{project_key}-token",
         )
+
+    async def _setup_logfire_project(self, project_name: str) -> None:
+        logfire_project: LogfireProject = await self.logfire.create_project(project_name)
+        await self.logfire.create_write_token(project_id=str(logfire_project.id))
 
     async def list_projects(self, user_id: UUID) -> list[ProjectSummary]:
         projects: list[Project] = await self.repository.list_by_user(user_id)
@@ -153,9 +164,7 @@ class ProjectService:
 
     async def _add_members(self, project_id: int, members: list[Member]) -> None:
         for member in members:
-            access_level: AccessLevel = ROLE_TO_ACCESS_LEVEL.get(
-                member.role.lower(), AccessLevel.DEVELOPER
-            )
+            access_level: AccessLevel = ROLE_TO_ACCESS_LEVEL.get(member.role.lower(), AccessLevel.DEVELOPER)
             await self.gitlab.add_member_to_project(
                 project_id=project_id,
                 user_name=member.gitlab_user_name,

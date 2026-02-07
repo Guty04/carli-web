@@ -34,6 +34,9 @@ class TemplateInterfaceBuilder(ABC):
     def build_source_files(self, data: BuilderProjectData) -> dict[str, str]: ...
 
     @abstractmethod
+    def build_alembic_files(self) -> dict[str, str]: ...
+
+    @abstractmethod
     def build_init_files(self) -> dict[str, str]: ...
 
     @abstractmethod

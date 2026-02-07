@@ -14,19 +14,17 @@ class Configuration(BaseSettings):
     APP_NAME: str = "backend"
     ENVIRONMENT: Environment = Environment.DEVELOPMENT
     CORS_ORIGIN: list[str] = ["http://localhost:3000"]
-    DATABASE_URL: PostgresDsn = PostgresDsn(
-        f"postgresql+asyncpg://user:password@localhost:5432/{APP_NAME}"
-    )
-    SECRET_KEY: str = "change-me-in-production"
+    DATABASE_URL: PostgresDsn = PostgresDsn(f"postgresql+asyncpg://user:password@localhost:5432/{APP_NAME}")
+    SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRES: int = 30
-    LOGFIRE_TOKEN: str | None = None
+    LOGFIRE_TOKEN: str
     LOGFIRE_API_URL: HttpUrl
     GITLAB_API_URL: HttpUrl
-    GITLAB_PRIVATE_TOKEN: str = ""
-    GITLAB_NAMESPACE_ID: int = 0
+    GITLAB_PRIVATE_TOKEN: str
+    GITLAB_NAMESPACE_ID: int
     SONARQUBE_API_URL: HttpUrl
-    SONARQUBE_TOKEN: str = ""
+    SONARQUBE_TOKEN: str
     JIRA_API_URL: HttpUrl
 
 
