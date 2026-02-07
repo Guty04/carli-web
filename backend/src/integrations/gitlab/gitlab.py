@@ -12,7 +12,6 @@ from src.errors import (
 
 from .domain import AccessLevel
 from .schemas import (
-    GitLabApprovalConfiguration,
     GitLabBranch,
     GitLabCommit,
     GitLabMember,
@@ -60,6 +59,20 @@ class GitLabClient:
         except RequestError as e:
             raise GitLabAPIError(f"Request failed: {str(e)}") from e
 
+    async def delete_project(self, project_id: int) -> None:
+        url: str = urljoin(base=self.base_url, url=f"projects/{project_id}")
+
+        try:
+            async with AsyncClient(timeout=self.timeout) as client:
+                response: Response = await client.delete(url=url, headers=self._headers())
+                response.raise_for_status()
+
+        except HTTPStatusError as e:
+            raise self._handle_http_error(e) from e
+
+        except RequestError as e:
+            raise GitLabAPIError(f"Request failed: {str(e)}") from e
+
     async def create_branch(self, project_id: int, branch_name: str, from_branch: str) -> GitLabBranch:
         url: str = urljoin(base=self.base_url, url=f"projects/{project_id}/repository/branches")
 
@@ -74,6 +87,38 @@ class GitLabClient:
                 response.raise_for_status()
 
                 return GitLabBranch.model_validate(response.json())
+
+        except HTTPStatusError as e:
+            raise self._handle_http_error(e) from e
+
+        except RequestError as e:
+            raise GitLabAPIError(f"Request failed: {str(e)}") from e
+
+    async def update_branch_protection(
+        self,
+        project_id: int,
+        branch_name: str,
+        push_access_level: AccessLevel,
+        merge_access_level: AccessLevel,
+        allow_force_push: bool = False,
+    ) -> GitLabProtectedBranch:
+        url: str = urljoin(base=self.base_url, url=f"projects/{project_id}/protected_branches/{branch_name}")
+
+        try:
+            async with AsyncClient(timeout=self.timeout) as client:
+                response: Response = await client.patch(
+                    url,
+                    json={
+                        "push_access_level": push_access_level.value,
+                        "merge_access_level": merge_access_level.value,
+                        "allow_force_push": allow_force_push,
+                    },
+                    headers=self._headers(),
+                )
+
+                response.raise_for_status()
+
+                return GitLabProtectedBranch.model_validate(response.json())
 
         except HTTPStatusError as e:
             raise self._handle_http_error(e) from e
@@ -153,36 +198,6 @@ class GitLabClient:
         except RequestError as e:
             raise GitLabAPIError(f"Request failed: {str(e)}") from e
 
-    async def configure_merge_request_approvals(
-        self,
-        project_id: int,
-    ) -> GitLabApprovalConfiguration:
-        url: str = urljoin(base=self.base_url, url=f"projects/{project_id}/approvals")
-
-        try:
-            async with AsyncClient(timeout=self.timeout) as client:
-                response: Response = await client.post(
-                    url,
-                    json={
-                        "approvals_before_merge": 1,
-                        "disable_overriding_approvers_per_merge_request": False,
-                        "reset_approvals_on_push": True,
-                        "merge_requests_author_approval": False,
-                        "require_password_to_approve": False,
-                    },
-                    headers=self._headers(),
-                )
-
-                response.raise_for_status()
-
-                return GitLabApprovalConfiguration.model_validate(response.json())
-
-        except HTTPStatusError as e:
-            raise self._handle_http_error(e) from e
-
-        except RequestError as e:
-            raise GitLabAPIError(f"Request failed: {str(e)}") from e
-
     async def add_member_to_project(self, project_id: int, user_name: str, access_level: AccessLevel) -> GitLabMember:
         url: str = urljoin(self.base_url, f"projects/{project_id}/members")
 
@@ -203,6 +218,23 @@ class GitLabClient:
 
         except RequestError as e:
             raise GitLabAPIError(f"Request failed: {str(e)}") from e
+
+    async def list_project_members(self, project_id: int) -> list[GitLabMember]:
+        url: str = urljoin(self.base_url, f"projects/{project_id}/members")
+
+        try:
+            async with AsyncClient(timeout=self.timeout) as client:
+                response: Response = await client.get(url, headers=self._headers())
+
+                response.raise_for_status()
+
+                return [GitLabMember.model_validate(m) for m in response.json()]
+
+        except HTTPStatusError as e:
+            raise self._handle_http_error(e) from e
+
+        except RequestError as e:
+            raise GitLabAPIError(f"Request failed: {e!s}") from e
 
     async def search_users(self, search: str) -> list[GitLabUser]:
         url: str = urljoin(self.base_url, "users")

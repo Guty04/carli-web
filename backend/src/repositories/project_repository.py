@@ -17,12 +17,16 @@ class ProjectRepository:
         id_user: UUID,
         id_project_gitlab: int,
         url_repository: str,
+        description: str | None = None,
+        id_project_logfire: str | None = None,
     ) -> Project:
         project = Project(
             name=name,
+            description=description,
             id_user=id_user,
             id_project_gitlab=id_project_gitlab,
             url_repository=url_repository,
+            id_project_logfire=id_project_logfire,
         )
         self.session.add(project)
         await self.session.flush()

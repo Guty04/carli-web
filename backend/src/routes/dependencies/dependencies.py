@@ -112,4 +112,5 @@ def get_project_service(
         repository=ProjectRepository(session=session),
         template_builder=backend_builder,
         webhook_base_url=str(configuration.WEBHOOK_BASE_URL),
+        sonarqube_alm_setting=configuration.SONARQUBE_ALM_SETTING,
     )

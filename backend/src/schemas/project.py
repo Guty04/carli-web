@@ -3,7 +3,9 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from src.enums import Project
+from src.enums import Environment, Project
+from src.integrations.gitlab.schemas import GitLabMember
+from src.integrations.sonarqube.schemas import QualityGateStatus
 
 
 class Member(BaseModel):
@@ -13,6 +15,7 @@ class Member(BaseModel):
 
 class ProjectDetail(BaseModel):
     name: str
+    description: str | None = None
     project_type: Project
     members: list[Member]
 
@@ -27,3 +30,14 @@ class ProjectSummary(BaseModel):
     name: str
     url_repository: str
     created_at: datetime
+
+
+class StageStatus(BaseModel):
+    stage: Environment
+    is_ready: bool
+
+
+class ProjectOverview(ProjectSummary):
+    quality_gate: QualityGateStatus
+    members: list[GitLabMember]
+    stages: list[StageStatus]

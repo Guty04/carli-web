@@ -11,9 +11,7 @@ class RolePermission(Base):
         {"comment": "Many-to-many join between roles and permissions"},
     )
 
-    id_role: Mapped[int] = mapped_column(
-        ForeignKey("role.id"), primary_key=True, comment="FK to role"
-    )
+    id_role: Mapped[int] = mapped_column(ForeignKey("role.id"), primary_key=True, comment="FK to role")
     id_permission: Mapped[int] = mapped_column(
         ForeignKey("permission.id"), primary_key=True, comment="FK to permission"
     )

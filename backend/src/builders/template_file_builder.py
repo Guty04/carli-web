@@ -44,7 +44,7 @@ class BackendBuilder(TemplateInterfaceBuilder):
             files[file_path] = self._render(template_path=template, data=data)
 
         if data.codeowners:
-            files["CODEOWNERS"] = self._generate_codeowners(owners=data.codeowners)
+            files["CODEOWNERS"] = self._generate_codeowners(members=data.codeowners)
 
         return files
 

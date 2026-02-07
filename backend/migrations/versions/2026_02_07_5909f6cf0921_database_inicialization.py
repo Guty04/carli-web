@@ -1,18 +1,19 @@
 """Database inicialization
 
-Revision ID: 3619c0186ac2
+Revision ID: 5909f6cf0921
 Revises:
-Create Date: 2026-02-05 20:27:33.166433
+Create Date: 2026-02-07 18:34:01.940439
 
 """
 
 from typing import Sequence, Union
 
-import sqlalchemy as sa
 from alembic import op
+import sqlalchemy as sa
+
 
 # revision identifiers, used by Alembic.
-revision: str = "3619c0186ac2"
+revision: str = "5909f6cf0921"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -24,12 +25,7 @@ def upgrade() -> None:
     op.create_table(
         "permission",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column(
-            "name",
-            sa.String(length=100),
-            nullable=False,
-            comment="Permission identifier (e.g. create_project)",
-        ),
+        sa.Column("name", sa.String(length=100), nullable=False, comment="Permission identifier (e.g. create_project)"),
         sa.Column(
             "created_at",
             sa.TIMESTAMP(timezone=True),
@@ -44,13 +40,7 @@ def upgrade() -> None:
             nullable=False,
             comment="Timestamp when the record was last updated",
         ),
-        sa.Column(
-            "is_active",
-            sa.Boolean(),
-            server_default="true",
-            nullable=False,
-            comment="Soft-delete flag",
-        ),
+        sa.Column("is_active", sa.Boolean(), server_default="true", nullable=False, comment="Soft-delete flag"),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_permission")),
         sa.UniqueConstraint("name", name=op.f("uq_permission_name")),
         comment="Available permissions in the platform",
@@ -58,9 +48,7 @@ def upgrade() -> None:
     op.create_table(
         "role",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column(
-            "name", sa.String(length=50), nullable=False, comment="Role display name"
-        ),
+        sa.Column("name", sa.String(length=50), nullable=False, comment="Role display name"),
         sa.Column(
             "created_at",
             sa.TIMESTAMP(timezone=True),
@@ -75,13 +63,7 @@ def upgrade() -> None:
             nullable=False,
             comment="Timestamp when the record was last updated",
         ),
-        sa.Column(
-            "is_active",
-            sa.Boolean(),
-            server_default="true",
-            nullable=False,
-            comment="Soft-delete flag",
-        ),
+        sa.Column("is_active", sa.Boolean(), server_default="true", nullable=False, comment="Soft-delete flag"),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_role")),
         sa.UniqueConstraint("name", name=op.f("uq_role_name")),
         comment="Platform roles (Admin, PM)",
@@ -89,9 +71,7 @@ def upgrade() -> None:
     op.create_table(
         "role_x_permission",
         sa.Column("id_role", sa.Integer(), nullable=False, comment="FK to role"),
-        sa.Column(
-            "id_permission", sa.Integer(), nullable=False, comment="FK to permission"
-        ),
+        sa.Column("id_permission", sa.Integer(), nullable=False, comment="FK to permission"),
         sa.Column(
             "created_at",
             sa.TIMESTAMP(timezone=True),
@@ -106,50 +86,23 @@ def upgrade() -> None:
             nullable=False,
             comment="Timestamp when the record was last updated",
         ),
-        sa.Column(
-            "is_active",
-            sa.Boolean(),
-            server_default="true",
-            nullable=False,
-            comment="Soft-delete flag",
-        ),
+        sa.Column("is_active", sa.Boolean(), server_default="true", nullable=False, comment="Soft-delete flag"),
         sa.ForeignKeyConstraint(
-            ["id_permission"],
-            ["permission.id"],
-            name=op.f("fk_role_x_permission_id_permission_permission"),
+            ["id_permission"], ["permission.id"], name=op.f("fk_role_x_permission_id_permission_permission")
         ),
-        sa.ForeignKeyConstraint(
-            ["id_role"], ["role.id"], name=op.f("fk_role_x_permission_id_role_role")
-        ),
-        sa.PrimaryKeyConstraint(
-            "id_role", "id_permission", name=op.f("pk_role_x_permission")
-        ),
-        sa.UniqueConstraint(
-            "id_role", "id_permission", name=op.f("uq_role_x_permission_id_role")
-        ),
+        sa.ForeignKeyConstraint(["id_role"], ["role.id"], name=op.f("fk_role_x_permission_id_role_role")),
+        sa.PrimaryKeyConstraint("id_role", "id_permission", name=op.f("pk_role_x_permission")),
+        sa.UniqueConstraint("id_role", "id_permission", name=op.f("uq_role_x_permission_id_role")),
         comment="Many-to-many join between roles and permissions",
     )
     op.create_table(
         "user",
-        sa.Column(
-            "id", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False
-        ),
+        sa.Column("id", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
         sa.Column("name", sa.String(length=100), nullable=False, comment="First name"),
-        sa.Column(
-            "lastname", sa.String(length=100), nullable=False, comment="Last name"
-        ),
-        sa.Column(
-            "email", sa.String(length=255), nullable=False, comment="Login email"
-        ),
-        sa.Column(
-            "password",
-            sa.String(length=255),
-            nullable=False,
-            comment="Argon2-hashed password",
-        ),
-        sa.Column(
-            "id_role", sa.Integer(), nullable=False, comment="FK to assigned role"
-        ),
+        sa.Column("lastname", sa.String(length=100), nullable=False, comment="Last name"),
+        sa.Column("email", sa.String(length=255), nullable=False, comment="Login email"),
+        sa.Column("password", sa.String(length=255), nullable=False, comment="Argon2-hashed password"),
+        sa.Column("id_role", sa.Integer(), nullable=False, comment="FK to assigned role"),
         sa.Column(
             "created_at",
             sa.TIMESTAMP(timezone=True),
@@ -164,46 +117,22 @@ def upgrade() -> None:
             nullable=False,
             comment="Timestamp when the record was last updated",
         ),
-        sa.Column(
-            "is_active",
-            sa.Boolean(),
-            server_default="true",
-            nullable=False,
-            comment="Soft-delete flag",
-        ),
-        sa.ForeignKeyConstraint(
-            ["id_role"], ["role.id"], name=op.f("fk_user_id_role_role")
-        ),
+        sa.Column("is_active", sa.Boolean(), server_default="true", nullable=False, comment="Soft-delete flag"),
+        sa.ForeignKeyConstraint(["id_role"], ["role.id"], name=op.f("fk_user_id_role_role")),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_user")),
         comment="Platform users (PMs, Admins)",
     )
     op.create_index(op.f("ix_user_email"), "user", ["email"], unique=True)
     op.create_table(
         "project",
-        sa.Column(
-            "id", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False
-        ),
-        sa.Column(
-            "name",
-            sa.String(length=150),
-            nullable=False,
-            comment="Project display name",
-        ),
-        sa.Column(
-            "id_user", sa.UUID(), nullable=False, comment="User who created the project"
-        ),
-        sa.Column(
-            "id_project_gitlab",
-            sa.Integer(),
-            nullable=False,
-            comment="GitLab project ID",
-        ),
-        sa.Column(
-            "url_repository",
-            sa.String(length=500),
-            nullable=False,
-            comment="SSH clone URL from GitLab",
-        ),
+        sa.Column("id", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
+        sa.Column("name", sa.String(length=150), nullable=False, comment="Project display name"),
+        sa.Column("id_user", sa.UUID(), nullable=False, comment="User who created the project"),
+        sa.Column("id_project_gitlab", sa.Integer(), nullable=False, comment="GitLab project ID"),
+        sa.Column("description", sa.String(length=500), nullable=True, comment="Project description for README"),
+        sa.Column("url_repository", sa.String(length=500), nullable=False, comment="SSH clone URL from GitLab"),
+        sa.Column("id_project_logfire", sa.String(length=36), nullable=True, comment="Logfire project UUID"),
+        sa.Column("web_domain", sa.String(), nullable=True, comment="Web domain for the server."),
         sa.Column(
             "created_at",
             sa.TIMESTAMP(timezone=True),
@@ -218,22 +147,38 @@ def upgrade() -> None:
             nullable=False,
             comment="Timestamp when the record was last updated",
         ),
-        sa.Column(
-            "is_active",
-            sa.Boolean(),
-            server_default="true",
-            nullable=False,
-            comment="Soft-delete flag",
-        ),
-        sa.ForeignKeyConstraint(
-            ["id_user"], ["user.id"], name=op.f("fk_project_id_user_user")
-        ),
+        sa.Column("is_active", sa.Boolean(), server_default="true", nullable=False, comment="Soft-delete flag"),
+        sa.ForeignKeyConstraint(["id_user"], ["user.id"], name=op.f("fk_project_id_user_user")),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_project")),
-        sa.UniqueConstraint(
-            "id_project_gitlab", name=op.f("uq_project_id_project_gitlab")
-        ),
+        sa.UniqueConstraint("id_project_gitlab", name=op.f("uq_project_id_project_gitlab")),
         comment="Projects created and managed by the platform",
     )
+    op.execute("""
+        INSERT INTO role (name, is_active)
+        VALUES
+            ('administrator', TRUE),
+            ('manager', TRUE)
+        """)
+    op.execute("""
+        INSERT INTO permission (name, is_active)
+        VALUES
+            ('create_project', TRUE),
+            ('read_project', TRUE),
+            ('read_projects', TRUE)
+        """)
+    op.execute("""
+        INSERT INTO role_x_permission (id_role, id_permission, is_active)
+        SELECT r.id, p.id, TRUE
+        FROM role r, permission p
+        WHERE r.name = 'administrator'
+        """)
+    op.execute("""
+        INSERT INTO role_x_permission (id_role, id_permission, is_active)
+        SELECT r.id, p.id, TRUE
+        FROM role r
+        JOIN permission p ON p.name IN ('read_project')
+        WHERE r.name = 'manager'
+        """)
     # ### end Alembic commands ###
 
 

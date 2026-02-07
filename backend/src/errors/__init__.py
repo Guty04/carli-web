@@ -12,6 +12,7 @@ from .logfire import (
     LogfireAuthenticationError,
     LogfireError,
 )
+from .project import ProjectNotFoundError
 from .sonarqube import (
     SonarQubeAPIError,
     SonarQubeAuthenticationError,
@@ -38,4 +39,5 @@ __all__: list[str] = [
     "SonarQubeAuthenticationError",
     "SonarQubeError",
     "SonarQubeNotFoundError",
+    "ProjectNotFoundError",
 ]

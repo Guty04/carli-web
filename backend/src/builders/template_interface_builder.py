@@ -48,7 +48,21 @@ class TemplateInterfaceBuilder(ABC):
             template_data=data,
         )
 
-    def _generate_codeowners(self, owners: list[Member]) -> str:
-        # TODO: Implement more complex logic for codeowners based on project structure and ownership rules
-        owner_list: str = " ".join(f"@{owner.gitlab_user_name}" for owner in owners)
-        return f"* {owner_list}\n"
+    def _generate_codeowners(self, members: list[Member]) -> str:
+        maintainers: list[str] = [
+            f"@{member.gitlab_user_name}" for member in members if member.role.lower() == "maintainer"
+        ]
+        developers: list[str] = [
+            f"@{member.gitlab_user_name}" for member in members if member.role.lower() in ("developer", "maintainer")
+        ]
+
+        lines: list[str] = []
+
+        if maintainers:
+            lines.append(f"* {' '.join(maintainers)}")
+
+        if developers:
+            lines.append(f"src/ {' '.join(developers)}")
+            lines.append(f"tests/ {' '.join(developers)}")
+
+        return "\n".join(lines) + "\n"

@@ -11,7 +11,7 @@ from src.errors.sonarqube import (
     SonarQubeNotFoundError,
 )
 
-from .schemas import SonarQubeProject, SonarQubeToken
+from .schemas import QualityGateStatus, SonarQubeProject, SonarQubeToken
 
 
 @dataclass
@@ -50,6 +50,24 @@ class SonarQubeClient:
         except RequestError as e:
             raise SonarQubeAPIError(f"Request failed: {str(e)}") from e
 
+    async def delete_project(self, project_key: str) -> None:
+        url: str = urljoin(base=self.base_url, url="api/projects/delete")
+
+        try:
+            async with AsyncClient(timeout=self.timeout) as client:
+                response: Response = await client.post(
+                    url=url,
+                    params={"project": project_key},
+                    headers=self._headers(),
+                )
+                response.raise_for_status()
+
+        except HTTPStatusError as e:
+            raise self._handle_http_error(e) from e
+
+        except RequestError as e:
+            raise SonarQubeAPIError(f"Request failed: {str(e)}") from e
+
     async def generate_project_token(
         self,
         project_key: str,
@@ -79,6 +97,54 @@ class SonarQubeClient:
         except RequestError as e:
             raise SonarQubeAPIError(f"Request failed: {str(e)}") from e
 
+    async def set_gitlab_binding(
+        self,
+        project_key: str,
+        alm_setting: str,
+        gitlab_project_id: int,
+    ) -> None:
+        url: str = urljoin(base=self.base_url, url="api/alm_settings/set_gitlab_binding")
+
+        try:
+            async with AsyncClient(timeout=self.timeout) as client:
+                response: Response = await client.post(
+                    url=url,
+                    params={
+                        "almSetting": alm_setting,
+                        "project": project_key,
+                        "repository": str(gitlab_project_id),
+                    },
+                    headers=self._headers(),
+                )
+                response.raise_for_status()
+
+        except HTTPStatusError as e:
+            raise self._handle_http_error(e) from e
+
+        except RequestError as e:
+            raise SonarQubeAPIError(f"Request failed: {str(e)}") from e
+
+    async def get_quality_gate_status(self, project_key: str) -> QualityGateStatus:
+        url: str = urljoin(base=self.base_url, url="api/qualitygates/project_status")
+
+        try:
+            async with AsyncClient(timeout=self.timeout) as client:
+                response: Response = await client.get(
+                    url=url,
+                    params={"projectKey": project_key},
+                    headers=self._headers(),
+                )
+
+                response.raise_for_status()
+
+                return QualityGateStatus.model_validate(response.json()["projectStatus"])
+
+        except HTTPStatusError as e:
+            raise self._handle_http_error(e) from e
+
+        except RequestError as e:
+            raise SonarQubeAPIError(f"Request failed: {e!s}") from e
+
     def _headers(self) -> dict[str, str]:
         credentials: str = b64encode(f"{self.token}:".encode()).decode()
         return {"Authorization": f"Basic {credentials}"}
@@ -88,8 +154,7 @@ class SonarQubeClient:
         if error.response.status_code == 401:
             return SonarQubeAuthenticationError()
 
-        elif error.response.status_code == 404:
+        if error.response.status_code == 404:
             return SonarQubeNotFoundError()
 
-        else:
-            return SonarQubeAPIError()
+        return SonarQubeAPIError()
