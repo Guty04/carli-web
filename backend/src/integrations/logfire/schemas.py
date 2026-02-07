@@ -23,3 +23,19 @@ class LogfireWriteToken(_LogfireBase):
     created_at: datetime
     description: str | None = None
     token: str
+
+
+class LogfireChannel(_LogfireBase):
+    id: UUID
+    organization_id: UUID
+    label: str
+    active: bool
+    created_at: datetime
+
+
+class LogfireAlertConfiguration(_LogfireBase):
+    id: UUID
+    organization_id: UUID
+    project_id: UUID
+    name: str
+    active: bool

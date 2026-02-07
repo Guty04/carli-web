@@ -3,6 +3,7 @@ from .dependencies import (
     get_current_user,
     get_gitlab_client,
     get_project_service,
+    get_webhook_service,
 )
 
 __all__: list[str] = [
@@ -10,4 +11,5 @@ __all__: list[str] = [
     "get_current_user",
     "get_gitlab_client",
     "get_project_service",
+    "get_webhook_service",
 ]

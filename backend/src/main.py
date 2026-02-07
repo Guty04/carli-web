@@ -6,7 +6,7 @@ from scalar_fastapi import get_scalar_api_reference  # type: ignore
 
 from src.configurations import configuration
 from src.enums import Environment
-from src.routes import auth_router, project_router
+from src.routes import auth_router, project_router, webhook_router
 
 logfire.configure()
 
@@ -43,7 +43,7 @@ async def root() -> dict[str, str]:
     return {"message": f"Welcome to {configuration.APP_NAME}"}
 
 
-for route in [auth_router, project_router]:
+for route in [auth_router, project_router, webhook_router]:
     app.include_router(route)
 
 

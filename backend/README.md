@@ -1,4 +1,4 @@
-# backend
+# Carli Backend
 
 ## Description
 
@@ -7,14 +7,42 @@ Add your project description here.
 ## Requirements
 
 - Python 3.13+
-- [uv](https://docs.astral.sh/uv/) (recommended) or pip
+- [uv](https://docs.astral.sh/uv/)
+- [pre-commit](https://pre-commit.com/)
+- [GGA](https://github.com/Gentleman-Programming/gentleman-guardian-angel) (Gentleman Guardian Angel)
+
+## Installation
+
+### uv
+
+```bash
+# Linux/macOS
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+### pre-commit
+
+```bash
+uv tool install pre-commit
+```
+
+### GGA
+
+```bash
+git clone https://github.com/Gentleman-Programming/gentleman-guardian-angel.git
+cd gga
+./install.sh
+```
 
 ## Quick Start
 
 ```bash
 # Clone the repository
-git clone https://http://localhost//backend.git
-cd backend
+git clone https://{{ github_url  }}/{{ project_name }}.git
+cd {{ project_name }}
 
 # Create virtual environment and install dependencies
 uv sync
@@ -32,7 +60,7 @@ fastapi run dev
 uv sync --dev
 
 # Install pre-commit hooks
-uv run pre-commit install
+pre-commit install
 ```
 
 ### Testing

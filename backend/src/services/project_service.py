@@ -7,7 +7,7 @@ from src.builders import TemplateInterfaceBuilder
 from src.database.models import Project
 from src.errors import LogfireError, SonarQubeError
 from src.integrations.gitlab import AccessLevel, GitLabClient, GitLabProject
-from src.integrations.logfire import LogfireClient, LogfireProject
+from src.integrations.logfire import ERROR_ALERT_QUERY, LogfireChannel, LogfireClient, LogfireProject
 from src.integrations.sonarqube import SonarQubeClient
 from src.repositories import ProjectRepository
 from src.schemas import BuilderProjectData, Member, ProjectCreated, ProjectDetail, ProjectSummary
@@ -26,6 +26,7 @@ class ProjectService:
     logfire: LogfireClient
     repository: ProjectRepository
     template_builder: TemplateInterfaceBuilder
+    webhook_base_url: str
 
     async def create_project(self, project: ProjectDetail, user_id: UUID) -> ProjectCreated:
         gitlab_project: GitLabProject = await self._setup_gitlab_project(project)
@@ -33,6 +34,16 @@ class ProjectService:
         try:
             await self._setup_sonarqube_project(project_name=project.name)
 
+            await self._setup_logfire_project(project_name=project.name)
+
+            db_project: Project = await self.repository.create(
+                name=project.name,
+                id_user=user_id,
+                id_project_gitlab=gitlab_project.id,
+                url_repository=gitlab_project.ssh_url_to_repo,
+            )
+
+            return ProjectCreated(repo_url=gitlab_project.ssh_url_to_repo, project_id=db_project.id)
         except SonarQubeError:
             logfire.error(
                 "SonarQube setup failed for project '{project_name}' "
@@ -42,9 +53,6 @@ class ProjectService:
             )
             raise
 
-        try:
-            await self._setup_logfire_project(project_name=project.name)
-
         except LogfireError:
             logfire.error(
                 "Logfire setup failed for project '{project_name}' "
@@ -53,15 +61,6 @@ class ProjectService:
                 gitlab_project_id=gitlab_project.id,
             )
             raise
-
-        db_project: Project = await self.repository.create(
-            name=project.name,
-            id_user=user_id,
-            id_project_gitlab=gitlab_project.id,
-            url_repository=gitlab_project.ssh_url_to_repo,
-        )
-
-        return ProjectCreated(repo_url=gitlab_project.ssh_url_to_repo, project_id=db_project.id)
 
     async def _setup_gitlab_project(self, project: ProjectDetail) -> GitLabProject:
         gitlab_project: GitLabProject = await self.gitlab.create_project(
@@ -114,6 +113,20 @@ class ProjectService:
     async def _setup_logfire_project(self, project_name: str) -> None:
         logfire_project: LogfireProject = await self.logfire.create_project(project_name)
         await self.logfire.create_write_token(project_id=str(logfire_project.id))
+
+        webhook_url: str = f"{self.webhook_base_url}webhooks/logfire/alerts"
+        channel: LogfireChannel = await self.logfire.create_channel(
+            label=f"{project_name}-alerts",
+            webhook_url=webhook_url,
+        )
+
+        await self.logfire.create_alert(
+            project_id=str(logfire_project.id),
+            name=f"{project_name} error alert",
+            description=f"Alert on error-level logs for {project_name}",
+            query=ERROR_ALERT_QUERY,
+            channel_ids=[str(channel.id)],
+        )
 
     async def list_projects(self, user_id: UUID) -> list[ProjectSummary]:
         projects: list[Project] = await self.repository.list_by_user(user_id)

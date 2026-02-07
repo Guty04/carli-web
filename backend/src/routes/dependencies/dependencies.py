@@ -9,9 +9,9 @@ from src.configurations import configuration
 from src.database import database
 from src.database.models import User
 from src.errors import AuthenticationError, AuthorizationError
-from src.integrations import GitLabClient, LogfireClient, SonarQubeClient
+from src.integrations import GitLabClient, JiraClient, LogfireClient, SonarQubeClient, TicketAgent
 from src.repositories import AuthRepository, ProjectRepository
-from src.services import AuthService, ProjectService
+from src.services import AuthService, ProjectService, WebhookService
 from src.utils.template_generator import TemplateGenerator
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
@@ -75,6 +75,29 @@ def get_backend_builder() -> BackendBuilder:
     return BackendBuilder(template_generator=template_generator)
 
 
+def get_jira_client() -> JiraClient:
+    return JiraClient(
+        base_url=f"{configuration.JIRA_API_URL}",
+        user_email=configuration.JIRA_USER_EMAIL,
+        token=configuration.JIRA_TOKEN,
+    )
+
+
+def get_ticket_agent() -> TicketAgent:
+    return TicketAgent(api_key=configuration.GEMINI_API_KEY, model_name=configuration.GEMINI_MODEL)
+
+
+def get_webhook_service(
+    jira_client: JiraClient = Depends(dependency=get_jira_client),
+    ticket_agent: TicketAgent = Depends(dependency=get_ticket_agent),
+) -> WebhookService:
+    return WebhookService(
+        jira=jira_client,
+        jira_project_key=configuration.JIRA_PROJECT_KEY,
+        ticket_agent=ticket_agent,
+    )
+
+
 def get_project_service(
     session: AsyncSession = Depends(dependency=database.get_async_session),
     gitlab_client: GitLabClient = Depends(dependency=get_gitlab_client),
@@ -88,4 +111,5 @@ def get_project_service(
         logfire=logfire_client,
         repository=ProjectRepository(session=session),
         template_builder=backend_builder,
+        webhook_base_url=str(configuration.WEBHOOK_BASE_URL),
     )

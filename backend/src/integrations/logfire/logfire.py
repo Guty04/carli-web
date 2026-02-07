@@ -9,7 +9,17 @@ from src.errors.logfire import (
     LogfireError,
 )
 
-from .schemas import LogfireProject, LogfireWriteToken
+from .schemas import LogfireAlertConfiguration, LogfireChannel, LogfireProject, LogfireWriteToken
+
+ERROR_ALERT_QUERY: str = (
+    "SELECT project_id, "
+    "trace_id,"
+    "message,"
+    "attributes -> 'fastapi.arguments.values' as request,"
+    "exception_message,"
+    "otel_events -> 0 ->'attributes'->>'exception.stacktrace' as stack_trace "
+    "FROM records WHERE level = 'error'"
+)
 
 
 @dataclass
@@ -62,6 +72,72 @@ class LogfireClient:
                 response.raise_for_status()
 
                 return LogfireWriteToken.model_validate(response.json())
+
+        except HTTPStatusError as e:
+            raise self._handle_http_error(e) from e
+
+        except RequestError as e:
+            raise LogfireAPIError(f"Request failed: {e!s}") from e
+
+    async def create_channel(
+        self,
+        label: str,
+        webhook_url: str,
+    ) -> LogfireChannel:
+        url: str = urljoin(base=self.base_url, url="api/v1/channels/")
+
+        try:
+            async with AsyncClient(timeout=self.timeout) as client:
+                response: Response = await client.post(
+                    url=url,
+                    json={
+                        "label": label,
+                        "type": "webhook",
+                        "format": "raw-data",
+                        "url": webhook_url,
+                    },
+                    headers=self._headers(),
+                )
+
+                response.raise_for_status()
+
+                return LogfireChannel.model_validate(response.json())
+
+        except HTTPStatusError as e:
+            raise self._handle_http_error(e) from e
+
+        except RequestError as e:
+            raise LogfireAPIError(f"Request failed: {e!s}") from e
+
+    async def create_alert(
+        self,
+        project_id: str,
+        name: str,
+        description: str,
+        query: str,
+        channel_ids: list[str],
+    ) -> LogfireAlertConfiguration:
+        url: str = urljoin(
+            base=self.base_url,
+            url=f"api/v1/projects/{project_id}/alerts/",
+        )
+
+        try:
+            async with AsyncClient(timeout=self.timeout) as client:
+                response: Response = await client.post(
+                    url=url,
+                    json={
+                        "name": name,
+                        "description": description,
+                        "query": query,
+                        "channel_ids": channel_ids,
+                    },
+                    headers=self._headers(),
+                )
+
+                response.raise_for_status()
+
+                return LogfireAlertConfiguration.model_validate(response.json())
 
         except HTTPStatusError as e:
             raise self._handle_http_error(e) from e

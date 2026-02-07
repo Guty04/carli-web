@@ -11,10 +11,10 @@ class Configuration(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
-    APP_NAME: str = "backend"
+    APP_NAME: str
     ENVIRONMENT: Environment = Environment.DEVELOPMENT
     CORS_ORIGIN: list[str] = ["http://localhost:3000"]
-    DATABASE_URL: PostgresDsn = PostgresDsn(f"postgresql+asyncpg://user:password@localhost:5432/{APP_NAME}")
+    DATABASE_URL: PostgresDsn
     SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRES: int = 30
@@ -26,6 +26,12 @@ class Configuration(BaseSettings):
     SONARQUBE_API_URL: HttpUrl
     SONARQUBE_TOKEN: str
     JIRA_API_URL: HttpUrl
+    JIRA_TOKEN: str
+    JIRA_USER_EMAIL: str
+    JIRA_PROJECT_KEY: str
+    GEMINI_API_KEY: str
+    GEMINI_MODEL: str
+    WEBHOOK_BASE_URL: HttpUrl
 
 
 configuration = Configuration()  # type:ignore
