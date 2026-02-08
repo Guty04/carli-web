@@ -13,7 +13,7 @@ class TemplateGenerator:
     def __post_init__(self) -> None:
         self.environment = Environment(
             loader=FileSystemLoader(self.templates_directory),
-            autoescape=False,  # nosec
+            autoescape=False,  # noqa: S701
             keep_trailing_newline=True,
         )
 
@@ -24,9 +24,7 @@ class TemplateGenerator:
     ) -> str:
         template: Template = self.environment.get_template(template_path.as_posix())
 
-        rendered_content: str = template.render(
-            template_data.model_dump() if template_data else {}
-        )
+        rendered_content: str = template.render(template_data.model_dump() if template_data else {})
 
         return rendered_content
 

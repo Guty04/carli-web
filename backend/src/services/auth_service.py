@@ -21,7 +21,9 @@ class AuthService:
         if user is None or not verify_password(plain=password, hashed=user.password):
             raise AuthenticationError()
 
-        access_token: str = create_access_token(TokenPayload(sub=str(user.id)))
+        access_token: str = create_access_token(
+            TokenPayload(sub=str(user.id), name=user.name + " " + user.lastname, role=user.role.name)
+        )
 
         return Token(access_token=access_token)
 
