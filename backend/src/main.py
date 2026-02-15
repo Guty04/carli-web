@@ -1,12 +1,14 @@
 import logfire
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
+from fastapi_limiter.depends import RateLimiter
+from pyrate_limiter import Duration, Limiter, Rate
 from scalar_fastapi import get_scalar_api_reference  # type: ignore
 
 from src.configurations import configuration
 from src.enums import Environment
-from src.routes import auth_router, project_router, webhook_router
+from src.routes import auth_router, project_router, user_router, webhook_router
 
 logfire.configure()
 
@@ -18,9 +20,12 @@ app = FastAPI(
     docs_url="/swagger" if configuration.ENVIRONMENT == Environment.DEVELOPMENT else None,
     redoc_url="/redoc" if configuration.ENVIRONMENT == Environment.DEVELOPMENT else None,
     openapi_url="/openapi.json" if configuration.ENVIRONMENT == Environment.DEVELOPMENT else None,
+    dependencies=[Depends(dependency=RateLimiter(limiter=Limiter(argument=Rate(limit=200, interval=Duration.MINUTE))))],
 )
 
+
 logfire.instrument_fastapi(app)
+logfire.instrument_httpx(capture_all=True)
 
 app.add_middleware(
     CORSMiddleware,
@@ -43,7 +48,7 @@ async def root() -> dict[str, str]:
     return {"message": f"Welcome to {configuration.APP_NAME}"}
 
 
-for route in [auth_router, project_router, webhook_router]:
+for route in [auth_router, project_router, user_router, webhook_router]:
     app.include_router(route)
 
 

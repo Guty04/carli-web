@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: ${project_name}
+      POSTGRES_DB: {{ project_name }}
       POSTGRES_INITDB_ARGS: "-E UTF8 --locale=es_AR.UTF-8"
     ports:
       - "5433:5432"

@@ -15,7 +15,7 @@ class Member(BaseModel):
 
 class ProjectDetail(BaseModel):
     name: str
-    description: str | None = None
+    description: str
     project_type: Project
     members: list[Member]
 

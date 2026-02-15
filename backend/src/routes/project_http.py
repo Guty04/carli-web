@@ -4,7 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, Security, status
 
 from src.database.models import User
 from src.enums import Permission
-from src.errors import GitLabError, LogfireError, ProjectNotFoundError, SonarQubeError
+from src.errors import (
+    GitLabError,
+    JiraError,
+    LogfireError,
+    ProjectAlreadyExistsError,
+    ProjectNotFoundError,
+    SonarQubeError,
+)
 from src.schemas import ProjectCreated, ProjectDetail, ProjectOverview, ProjectSummary
 from src.services import ProjectService
 
@@ -22,7 +29,10 @@ async def create_project(
     try:
         return await project_service.create_project(project=project, user_id=current_user.id)
 
-    except (GitLabError, LogfireError) as e:
+    except ProjectAlreadyExistsError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
+
+    except (GitLabError, LogfireError, JiraError, SonarQubeError) as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
@@ -39,12 +49,12 @@ async def list_projects(
 
 @project_router.get(path="/{project_id}", response_model=ProjectOverview)
 async def get_project(
-    project_id: str,
+    project_id: UUID,
     current_user: User = Security(dependency=get_current_user, scopes=[Permission.READ_PROJECTS]),
     project_service: ProjectService = Depends(dependency=get_project_service),
 ) -> ProjectOverview:
     try:
-        return await project_service.get_project_overview(user_id=current_user.id, project_id=UUID(project_id))
+        return await project_service.get_project_overview(user_id=current_user.id, project_id=project_id)
 
     except ProjectNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e

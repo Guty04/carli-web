@@ -4,29 +4,31 @@ import logfire
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
-from scalar_fastapi import get_scalar_api_reference # type: ignore
+from fastapi_limiter.depends import RateLimiter
+from pyrate_limiter import Duration, Limiter, Rate
+from scalar_fastapi import get_scalar_api_reference  # type: ignore
 
-from src.configurations.config import Settings
+from src.configurations.configuration import configuration
 from src.enums.environment import Environment
-
-settings = Settings()
 
 logfire.configure()
 
 app = FastAPI(
-    title=settings.APP_NAME,
+    title=configuration.APP_NAME,
     description="API for {{ project_name }}",
     version="0.0.1",
-    docs_url="/swagger" if settings.ENVIRONMENT == Environment.DEVELOPMENT else None,
-    redoc_url="/redoc" if settings.ENVIRONMENT == Environment.DEVELOPMENT else None,
-    openapi_url="/openapi.json" if settings.ENVIRONMENT == Environment.DEVELOPMENT else None,
+    docs_url="/swagger" if configuration.ENVIRONMENT == Environment.DEVELOPMENT else None,
+    redoc_url="/redoc" if configuration.ENVIRONMENT == Environment.DEVELOPMENT else None,
+    openapi_url="/openapi.json" if configuration.ENVIRONMENT == Environment.DEVELOPMENT else None,
+    dependencies=[Depends(dependency=RateLimiter(limiter=Limiter(argument=Rate(limit=200, interval=Duration.MINUTE))))],
 )
 
 logfire.instrument_fastapi(app)
+logfire.instrument_httpx(capture_all=True)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGIN,
+    allow_origins=configuration.CORS_ORIGIN,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -35,14 +37,15 @@ app.add_middleware(
 
 @app.get("/health", tags=["Health"])
 async def health_check() -> dict[str, str]:
-    return {"status": "healthy", "environment": settings.ENVIRONMENT}
+    return {"status": "healthy", "environment": configuration.ENVIRONMENT}
 
 
 @app.get("/", tags=["Root"])
 async def root() -> dict[str, str]:
-    return {"message": f"Welcome to {settings.APP_NAME}"}
+    return {"message": f"Welcome to {configuration.APP_NAME}"}
 
-if settings.ENVIRONMENT == Environment.DEVELOPMENT:
+
+if configuration.ENVIRONMENT == Environment.DEVELOPMENT:
 
     @app.get("/docs", include_in_schema=False)
     async def scalar_docs() -> HTMLResponse:

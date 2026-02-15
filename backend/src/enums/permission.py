@@ -5,3 +5,4 @@ class Permission(StrEnum):
     CREATE_PROJECT = auto()
     READ_PROJECT = auto()
     READ_PROJECTS = auto()
+    READ_USERS = auto()

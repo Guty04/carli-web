@@ -31,7 +31,7 @@ class LogfireClient:
     async def create_project(
         self,
         project_name: str,
-        description: str = "",
+        description: str,
         visibility: str = "private",
     ) -> LogfireProject:
         url: str = urljoin(base=self.base_url, url="v1/projects/")
@@ -81,8 +81,8 @@ class LogfireClient:
         except RequestError as e:
             raise LogfireAPIError(f"Request failed: {e!s}") from e
 
-    async def create_channel(
-        self,
+    async def create_channel(  # TODO este no hace falta, se crea una unica vez y ya esta,
+        self,  # lo que si habria que crear son alertas para cada proyectod
         label: str,
         webhook_url: str,
     ) -> LogfireChannel:

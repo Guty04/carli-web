@@ -9,3 +9,9 @@ class JiraIssue(_JiraBase):
     id: str
     key: str
     self_url: str = Field(alias="self")
+
+
+class JiraProject(_JiraBase):
+    id: int
+    key: str
+    self_url: str = Field(alias="self")

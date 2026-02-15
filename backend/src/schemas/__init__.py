@@ -1,6 +1,7 @@
 from .auth import Token, TokenPayload
 from .builder import BuilderProjectData
 from .project import Member, ProjectCreated, ProjectDetail, ProjectOverview, ProjectSummary, StageStatus
+from .user import UserSummary
 from .webhook import LogfireAlert
 
 __all__: list[str] = [
@@ -14,4 +15,5 @@ __all__: list[str] = [
     "Token",
     "TokenPayload",
     "StageStatus",
+    "UserSummary",
 ]

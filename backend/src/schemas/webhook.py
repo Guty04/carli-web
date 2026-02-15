@@ -1,4 +1,4 @@
-from typing import Any
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
@@ -6,9 +6,9 @@ from pydantic import BaseModel, ConfigDict
 class LogfireAlert(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    project_id: str
+    project_id: UUID
     trace_id: str
     message: str
-    request: dict[str, Any]
+    request: dict[str, str | int | float | bool]
     exception_message: str
     stack_trace: str

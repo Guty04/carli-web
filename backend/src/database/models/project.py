@@ -22,10 +22,9 @@ class Project(Base):
         ForeignKey("user.id"),
         comment="User who created the project",
     )
-    id_project_gitlab: Mapped[int] = mapped_column(unique=True, comment="GitLab project ID")
-    description: Mapped[str | None] = mapped_column(
-        String(500), nullable=True, comment="Project description for README"
-    )
+    description: Mapped[str] = mapped_column(String(500), comment="Project description for README")
     url_repository: Mapped[str] = mapped_column(String(500), comment="SSH clone URL from GitLab")
-    id_project_logfire: Mapped[str | None] = mapped_column(String(36), nullable=True, comment="Logfire project UUID")
+    id_project_logfire: Mapped[UUID] = mapped_column(SQLUUID(as_uuid=True), comment="Logfire project UUID")
+    id_project_gitlab: Mapped[int] = mapped_column(unique=True, comment="GitLab project ID")
+    id_project_jira: Mapped[int] = mapped_column(unique=True, comment="Jira project ID")
     web_domain: Mapped[str | None] = mapped_column(String(), nullable=True, comment="Web domain for the server.")

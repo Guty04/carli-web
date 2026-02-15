@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from src.configurations import configuration
-from src.enums import Environment
+from src.configurations.configuration import configuration
+from src.enums.environment import Environment
 
 
 class Database:
@@ -23,7 +23,7 @@ class Database:
             pool_timeout=30,
         )
         self.session_maker: async_sessionmaker[AsyncSession] = async_sessionmaker(
-            bind=self.engine, expire_on_commit=False, class_=AsyncSession
+            bind=self.engine, expire_on_commit=False
         )
 
     async def get_async_session(self) -> AsyncGenerator[AsyncSession]:
@@ -35,6 +35,9 @@ class Database:
             except Exception:
                 await session.rollback()
                 raise
+
+            finally:
+                await session.close()
 
 
 database: Database = Database()

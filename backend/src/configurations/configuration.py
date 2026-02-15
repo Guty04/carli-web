@@ -25,11 +25,10 @@ class Configuration(BaseSettings):
     GITLAB_NAMESPACE_ID: int
     SONARQUBE_API_URL: HttpUrl
     SONARQUBE_TOKEN: str
-    SONARQUBE_ALM_SETTING: str | None = None
+    SONARQUBE_ALM_SETTING: str
     JIRA_API_URL: HttpUrl
     JIRA_TOKEN: str
     JIRA_USER_EMAIL: str
-    JIRA_PROJECT_KEY: str
     GEMINI_API_KEY: str
     GEMINI_MODEL: str
     WEBHOOK_BASE_URL: HttpUrl

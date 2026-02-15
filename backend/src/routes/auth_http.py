@@ -17,9 +17,7 @@ async def login(
     auth_service: AuthService = Depends(dependency=get_auth_service),
 ) -> Token:
     try:
-        token: Token = await auth_service.login(
-            email=credentials.username, password=credentials.password
-        )
+        token: Token = await auth_service.login(email=credentials.username, password=credentials.password)
 
     except AuthenticationError as e:
         raise HTTPException(
@@ -40,6 +38,4 @@ async def login(
 
 @auth_router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(response: Response) -> None:
-    response.delete_cookie(
-        key="access_token", httponly=True, secure=True, samesite="lax"
-    )
+    response.delete_cookie(key="access_token", httponly=True, secure=True, samesite="lax")

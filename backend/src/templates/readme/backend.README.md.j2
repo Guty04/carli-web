@@ -1,8 +1,18 @@
 # {{ project_name }}
 
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
+
 ## Description
 
-Add your project description here.
+{{ description }}
+
+## Tools
+
+- [Diagramar bases de datos](https://www.drawdb.app)
+- [Consultar documentacion de una libreria](https://context7.com)
 
 ## Requirements
 
@@ -48,7 +58,7 @@ cd {{ project_name }}
 uv sync
 
 # Run the application
-fastapi run dev
+fastapi run dev src/main.py
 ```
 
 ## Development
@@ -105,6 +115,10 @@ uv run mypy src/
 │   ├── routes/              # API endpoints
 │   ├── schemas/             # Pydantic schemas
 │   └── services/            # Business logic
+├── migrations/
+│   ├── versions/            # Migration scripts
+│   ├── env.py               # Alembic environment config
+│   └── script.py.mako       # Migration template
 ├── tests/
 │   ├── e2e/                 # End-to-end tests
 │   ├── integration/         # Integration tests

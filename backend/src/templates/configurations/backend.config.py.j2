@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from src.enums.environment import Environment
 
 
-class Settings(BaseSettings):
+class Configuration(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -19,3 +19,5 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRES: int = 30
     LOGFIRE_TOKEN: str | None = None
     CORS_ORIGIN: list[str] = ["http://localhost:3000"]
+
+configuration = Configuration()  # type:ignore

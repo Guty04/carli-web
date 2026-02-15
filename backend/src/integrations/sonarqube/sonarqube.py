@@ -99,20 +99,23 @@ class SonarQubeClient:
 
     async def set_gitlab_binding(
         self,
+        project_name: str,
         project_key: str,
         alm_setting: str,
         gitlab_project_id: int,
     ) -> None:
-        url: str = urljoin(base=self.base_url, url="api/alm_settings/set_gitlab_binding")
+        url: str = urljoin(base=self.base_url, url="api/v2/dop-translation/bound-projects")
 
         try:
             async with AsyncClient(timeout=self.timeout) as client:
                 response: Response = await client.post(
                     url=url,
-                    params={
-                        "almSetting": alm_setting,
-                        "project": project_key,
-                        "repository": str(gitlab_project_id),
+                    json={
+                        "projectKey": project_key,
+                        "projectName": project_name,
+                        "devOpsPlatformSettingId": alm_setting,
+                        "repositoryIdentifier": str(gitlab_project_id),
+                        "monorepo": False,
                     },
                     headers=self._headers(),
                 )

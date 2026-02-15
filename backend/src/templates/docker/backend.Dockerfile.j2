@@ -11,7 +11,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
 
-WORKDIR /app
+WORKDIR /src
 
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -37,7 +37,7 @@ FROM python:3.13-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH="/app/.venv/bin:$PATH"
+    PATH="/src/.venv/bin:$PATH"
 
 # Create non-root user for security
 RUN groupadd --gid 1000 appgroup && \
@@ -46,8 +46,8 @@ RUN groupadd --gid 1000 appgroup && \
 WORKDIR /app
 
 # Copy virtual environment from builder
-COPY --from=builder --chown=appuser:appgroup /app/.venv ./.venv
-COPY --from=builder --chown=appuser:appgroup /app/src ./src
+COPY --from=builder --chown=appuser:appgroup /src/.venv ./.venv
+COPY --from=builder --chown=appuser:appgroup /src/src ./src
 
 # Switch to non-root user
 USER appuser

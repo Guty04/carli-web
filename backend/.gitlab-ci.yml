@@ -88,8 +88,7 @@ sonar:
     - >-
       sonar-scanner
       -Dsonar.host.url="${SONAR_HOST_URL}"
-      -Dsonar.token="${SONAR_TOKEN}"
-      -Dsonar.projectKey="{{ project_key }}"
+      -Dsonar.projectKey="{{ project_name }}"
       -Dsonar.sources=src
       -Dsonar.tests=tests
       -Dsonar.python.coverage.reportPaths=coverage.xml

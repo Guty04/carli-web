@@ -65,15 +65,20 @@ class BackendBuilder(TemplateInterfaceBuilder):
         return {".gitlab-ci.yml": self._render("ci/backend.gitlab-ci.yml.j2", data)}
 
     def build_package_files(self, data: BuilderProjectData) -> dict[str, str]:
-        return {"pyproject.toml": self._render("packages/backend.package.j2", data)}
+        package_data: BuilderProjectData = data.model_copy(
+            update={"project_name": data.project_name.lower().replace(" ", "-")}
+        )
+        return {"pyproject.toml": self._render("packages/backend.package.j2", package_data)}
 
     def build_source_files(self, data: BuilderProjectData) -> dict[str, str]:
         files: dict[str, str] = {}
 
         source_templates: dict[str, str] = {
             "src/main.py": "main/backend.main.py.j2",
-            "src/configurations/config.py": "configurations/backend.config.py.j2",
+            "src/configurations/configuration.py": "configurations/backend.config.py.j2",
             "src/enums/environment.py": "enums/backend.environment.py.j2",
+            "src/database/connection.py": "database/backend.connection.py.j2",
+            "src/database/models/base.py": "database/backend.base.py.j2",
         }
 
         for file_path, template in source_templates.items():

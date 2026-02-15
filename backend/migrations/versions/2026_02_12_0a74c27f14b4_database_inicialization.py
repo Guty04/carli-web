@@ -1,8 +1,8 @@
 """Database inicialization
 
-Revision ID: 5909f6cf0921
+Revision ID: 0a74c27f14b4
 Revises:
-Create Date: 2026-02-07 18:34:01.940439
+Create Date: 2026-02-12 20:45:33.172064
 
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "5909f6cf0921"
+revision: str = "0a74c27f14b4"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -128,10 +128,11 @@ def upgrade() -> None:
         sa.Column("id", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
         sa.Column("name", sa.String(length=150), nullable=False, comment="Project display name"),
         sa.Column("id_user", sa.UUID(), nullable=False, comment="User who created the project"),
-        sa.Column("id_project_gitlab", sa.Integer(), nullable=False, comment="GitLab project ID"),
-        sa.Column("description", sa.String(length=500), nullable=True, comment="Project description for README"),
+        sa.Column("description", sa.String(length=500), nullable=False, comment="Project description for README"),
         sa.Column("url_repository", sa.String(length=500), nullable=False, comment="SSH clone URL from GitLab"),
-        sa.Column("id_project_logfire", sa.String(length=36), nullable=True, comment="Logfire project UUID"),
+        sa.Column("id_project_logfire", sa.UUID(), nullable=False, comment="Logfire project UUID"),
+        sa.Column("id_project_gitlab", sa.Integer(), nullable=False, comment="GitLab project ID"),
+        sa.Column("id_project_jira", sa.Integer(), nullable=False, comment="Jira project ID"),
         sa.Column("web_domain", sa.String(), nullable=True, comment="Web domain for the server."),
         sa.Column(
             "created_at",
@@ -151,6 +152,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["id_user"], ["user.id"], name=op.f("fk_project_id_user_user")),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_project")),
         sa.UniqueConstraint("id_project_gitlab", name=op.f("uq_project_id_project_gitlab")),
+        sa.UniqueConstraint("id_project_jira", name=op.f("uq_project_id_project_jira")),
         comment="Projects created and managed by the platform",
     )
     op.execute("""

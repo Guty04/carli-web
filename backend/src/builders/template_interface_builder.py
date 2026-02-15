@@ -62,7 +62,7 @@ class TemplateInterfaceBuilder(ABC):
             lines.append(f"* {' '.join(maintainers)}")
 
         if developers:
-            lines.append(f"src/ {' '.join(developers)}")
+            lines.append(f"app/ {' '.join(developers)}")
             lines.append(f"tests/ {' '.join(developers)}")
 
         return "\n".join(lines) + "\n"

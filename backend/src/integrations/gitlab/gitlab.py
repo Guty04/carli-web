@@ -59,13 +59,23 @@ class GitLabClient:
         except RequestError as e:
             raise GitLabAPIError(f"Request failed: {str(e)}") from e
 
-    async def delete_project(self, project_id: int) -> None:
+    async def delete_project(self, project_id: int, full_path: str) -> None:
         url: str = urljoin(base=self.base_url, url=f"projects/{project_id}")
-
+        delete_full_path: str = full_path + f"-deletion_scheduled-{project_id}"
         try:
             async with AsyncClient(timeout=self.timeout) as client:
-                response: Response = await client.delete(url=url, headers=self._headers())
-                response.raise_for_status()
+                soft_delete: Response = await client.delete(url=url, headers=self._headers())
+                soft_delete.raise_for_status()
+
+                permanent: Response = await client.delete(
+                    url=url,
+                    params={
+                        "permanently_remove": "true",
+                        "full_path": delete_full_path,
+                    },
+                    headers=self._headers(),
+                )
+                permanent.raise_for_status()
 
         except HTTPStatusError as e:
             raise self._handle_http_error(e) from e
@@ -218,6 +228,37 @@ class GitLabClient:
 
         except RequestError as e:
             raise GitLabAPIError(f"Request failed: {str(e)}") from e
+
+    async def create_ci_variable(
+        self,
+        project_id: int,
+        key: str,
+        value: str,
+        masked: bool = True,
+        protected: bool = False,
+    ) -> None:
+        url: str = urljoin(self.base_url, f"projects/{project_id}/variables")
+
+        try:
+            async with AsyncClient(timeout=self.timeout) as client:
+                response: Response = await client.post(
+                    url,
+                    json={
+                        "key": key,
+                        "value": value,
+                        "masked": masked,
+                        "protected": protected,
+                    },
+                    headers=self._headers(),
+                )
+
+                response.raise_for_status()
+
+        except HTTPStatusError as e:
+            raise self._handle_http_error(e) from e
+
+        except RequestError as e:
+            raise GitLabAPIError(f"Request failed: {e!s}") from e
 
     async def list_project_members(self, project_id: int) -> list[GitLabMember]:
         url: str = urljoin(self.base_url, f"projects/{project_id}/members")

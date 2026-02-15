@@ -30,12 +30,6 @@ repos:
     hooks:
       - id: mypy
 
-  - repo: https://github.com/hadolint/hadolint
-    rev: v2.13.0-beta
-    hooks:
-      - id: hadolint
-        args: ["--ignore=DL3013"]
-
   - repo: local
     hooks:
       - id: gga

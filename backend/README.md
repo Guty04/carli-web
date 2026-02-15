@@ -4,6 +4,11 @@
 
 Add your project description here.
 
+## Tools
+
+- [Diagramar bases de datos](https://www.drawdb.app)
+- [Consultar documentacion de una libreria](https://context7.com)
+
 ## Requirements
 
 - Python 3.13+
@@ -105,6 +110,10 @@ backend/
 │   ├── routes/              # API endpoints
 │   ├── schemas/             # Pydantic schemas
 │   └── services/            # Business logic
+├── migrations/
+│   ├── versions/            # Migration scripts
+│   ├── env.py               # Alembic environment config
+│   └── script.py.mako       # Migration template
 ├── tests/
 │   ├── e2e/                 # End-to-end tests
 │   ├── integration/         # Integration tests

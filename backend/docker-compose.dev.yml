@@ -5,8 +5,8 @@ services:
     hostname: gitlab.local
     restart: always
     ports:
-      - "8080:80" # GitLab UI
-      - "2222:22" # SSH for git over SSH
+      - "8080:80"
+      - "2222:22"
     volumes:
       - gitlab_config:/etc/gitlab
       - gitlab_logs:/var/log/gitlab
@@ -22,7 +22,7 @@ services:
     depends_on:
       - sonarqube_db
     ports:
-      - "9000:9000" # SonarQube UI
+      - "9000:9000"
     environment:
       SONAR_JDBC_URL: jdbc:postgresql://sonarqube_db:5432/sonar
       SONAR_JDBC_USERNAME: sonar
