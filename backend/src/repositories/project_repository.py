@@ -4,7 +4,9 @@ from uuid import UUID
 from sqlalchemy import Result, Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.database.models.integration import Integration
 from src.database.models.project import Project
+from src.enums import Integration as IntegrationEnum
 
 
 @dataclass
@@ -15,20 +17,14 @@ class ProjectRepository:
         self,
         name: str,
         id_user: UUID,
-        id_project_gitlab: int,
         url_repository: str,
         description: str,
-        id_project_logfire: str,
-        id_project_jira: int,
     ) -> Project:
         project = Project(
             name=name,
             description=description,
             id_user=id_user,
-            id_project_gitlab=id_project_gitlab,
             url_repository=url_repository,
-            id_project_logfire=id_project_logfire,
-            id_project_jira=id_project_jira,
         )
         self.session.add(project)
         await self.session.flush()
@@ -46,8 +42,15 @@ class ProjectRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_by_logfire_id(self, logfire_id: UUID) -> Project | None:
-        statement: Select[tuple[Project]] = select(Project).where(Project.id_project_logfire == logfire_id)
+    async def get_by_integration_id(self, integration: IntegrationEnum, external_id: str) -> Project | None:
+        statement: Select[tuple[Project]] = (
+            select(Project)
+            .join(Integration)
+            .where(
+                Integration.name == integration.value,
+                Integration.external_id == external_id,
+            )
+        )
         result: Result[tuple[Project]] = await self.session.execute(statement)
 
         return result.scalar_one_or_none()

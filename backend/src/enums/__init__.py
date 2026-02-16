@@ -1,6 +1,13 @@
 from .environment import Environment
-from .integrations import Integrations
+from .external_system import ExternalSystem
+from .integration import Integration
 from .permission import Permission
 from .project import Project
 
-__all__: list[str] = ["Environment", "Project", "Integrations", "Permission"]
+__all__: list[str] = [
+    "Environment",
+    "ExternalSystem",
+    "Integration",
+    "Permission",
+    "Project",
+]

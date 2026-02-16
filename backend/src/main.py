@@ -10,16 +10,18 @@ from src.configurations import configuration
 from src.enums import Environment
 from src.routes import auth_router, project_router, user_router, webhook_router
 
-logfire.configure()
+logfire.configure(service_name=configuration.APP_NAME)
 
 
 app = FastAPI(
     title=configuration.APP_NAME,
     description="API for backend",
     version="0.0.1",
-    docs_url="/swagger" if configuration.ENVIRONMENT == Environment.DEVELOPMENT else None,
-    redoc_url="/redoc" if configuration.ENVIRONMENT == Environment.DEVELOPMENT else None,
-    openapi_url="/openapi.json" if configuration.ENVIRONMENT == Environment.DEVELOPMENT else None,
+    docs_url="/swagger" if configuration.ENVIRONMENT not in [Environment.PRODUCTION, Environment.STAGING] else None,
+    redoc_url="/redoc" if configuration.ENVIRONMENT not in [Environment.PRODUCTION, Environment.STAGING] else None,
+    openapi_url="/openapi.json"
+    if configuration.ENVIRONMENT not in [Environment.PRODUCTION, Environment.STAGING]
+    else None,
     dependencies=[Depends(dependency=RateLimiter(limiter=Limiter(argument=Rate(limit=200, interval=Duration.MINUTE))))],
 )
 
@@ -52,7 +54,7 @@ for route in [auth_router, project_router, user_router, webhook_router]:
     app.include_router(route)
 
 
-if configuration.ENVIRONMENT == Environment.DEVELOPMENT:
+if configuration.ENVIRONMENT not in [Environment.PRODUCTION, Environment.STAGING]:
 
     @app.get("/docs", include_in_schema=False)
     async def scalar_docs() -> HTMLResponse:

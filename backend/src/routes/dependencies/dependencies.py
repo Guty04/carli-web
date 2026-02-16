@@ -9,8 +9,8 @@ from src.configurations import configuration
 from src.database import database
 from src.database.models import User
 from src.errors import AuthenticationError, AuthorizationError
-from src.integrations import GitLabClient, JiraClient, LogfireClient, SonarQubeClient, TicketAgent
-from src.repositories import AuthRepository, ProjectRepository
+from src.integrations import GitLabClient, InfisicalClient, JiraClient, LogfireClient, SonarQubeClient, TicketAgent
+from src.repositories import AuthRepository, IntegrationRepository, ProjectRepository
 from src.services import AuthService, ProjectService, UserService, WebhookService
 from src.utils.template_generator import TemplateGenerator
 
@@ -58,6 +58,7 @@ def get_gitlab_client() -> GitLabClient:
 def get_sonarqube_client() -> SonarQubeClient:
     return SonarQubeClient(
         base_url=f"{configuration.SONARQUBE_API_URL}",
+        alm_setting=configuration.SONARQUBE_ALM_SETTING,
         token=configuration.SONARQUBE_TOKEN,
     )
 
@@ -66,6 +67,14 @@ def get_logfire_client() -> LogfireClient:
     return LogfireClient(
         base_url=f"{configuration.LOGFIRE_API_URL}",
         token=configuration.LOGFIRE_TOKEN,
+    )
+
+
+def get_infisical_client() -> InfisicalClient:
+    return InfisicalClient(
+        base_url=str(configuration.INFISICAL_API_URL),
+        client_id=configuration.INFISICAL_CLIENT_ID,
+        client_secret=configuration.INFISICAL_SECRET_ID,
     )
 
 
@@ -93,6 +102,7 @@ def get_project_service(
     sonarqube_client: SonarQubeClient = Depends(dependency=get_sonarqube_client),
     logfire_client: LogfireClient = Depends(dependency=get_logfire_client),
     jira_client: JiraClient = Depends(dependency=get_jira_client),
+    infisical_client: InfisicalClient = Depends(dependency=get_infisical_client),
     backend_builder: BackendBuilder = Depends(dependency=get_backend_builder),
 ) -> ProjectService:
     return ProjectService(
@@ -100,10 +110,11 @@ def get_project_service(
         sonarqube=sonarqube_client,
         logfire=logfire_client,
         jira=jira_client,
+        infisical=infisical_client,
         repository=ProjectRepository(session=session),
+        integration_repository=IntegrationRepository(session=session),
         template_builder=backend_builder,
         webhook_base_url=str(configuration.WEBHOOK_BASE_URL),
-        sonarqube_alm_setting=configuration.SONARQUBE_ALM_SETTING,
     )
 
 
@@ -121,5 +132,6 @@ def get_webhook_service(
     return WebhookService(
         jira=jira_client,
         repository=ProjectRepository(session=session),
+        integration_repository=IntegrationRepository(session=session),
         ticket_agent=ticket_agent,
     )

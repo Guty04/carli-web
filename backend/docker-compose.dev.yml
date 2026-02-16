@@ -47,6 +47,51 @@ services:
     networks:
       - devsecops_net
 
+  infisical_db:
+    image: postgres:14-alpine
+    container_name: infisical-db
+    restart: always
+    env_file: .dev.env
+    volumes:
+      - infisical_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: "pg_isready --username=infisical && psql --username=infisical --list"
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    networks:
+      - devsecops_net
+
+  infisical_redis:
+    image: redis
+    container_name: infisical-dev-redis
+    env_file: .dev.env
+    restart: always
+    networks:
+      - devsecops_net
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    volumes:
+      - infisical_redis_data:/data
+
+  infisical:
+    image: infisical/infisical:latest
+    pull_policy: always
+    container_name: infisical-backend
+    restart: unless-stopped
+    depends_on:
+      infisical_db:
+        condition: service_healthy
+      infisical_redis:
+        condition: service_started
+    ports:
+      - "8081:8080"
+    env_file: .dev.env
+    environment:
+      - NODE_ENV=production
+    networks:
+      - devsecops_net
+
 volumes:
   gitlab_config:
   gitlab_logs:
@@ -55,6 +100,8 @@ volumes:
   sonarqube_extensions:
   sonarqube_logs:
   sonarqube_db_data:
+  infisical_db_data:
+  infisical_redis_data:
 
 networks:
   devsecops_net:

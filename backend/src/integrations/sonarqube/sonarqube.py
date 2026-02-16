@@ -17,6 +17,7 @@ from .schemas import QualityGateStatus, SonarQubeProject, SonarQubeToken
 @dataclass
 class SonarQubeClient:
     base_url: str
+    alm_setting: str
     token: str
     timeout: int = 30
 
@@ -101,7 +102,6 @@ class SonarQubeClient:
         self,
         project_name: str,
         project_key: str,
-        alm_setting: str,
         gitlab_project_id: int,
     ) -> None:
         url: str = urljoin(base=self.base_url, url="api/v2/dop-translation/bound-projects")
@@ -113,7 +113,7 @@ class SonarQubeClient:
                     json={
                         "projectKey": project_key,
                         "projectName": project_name,
-                        "devOpsPlatformSettingId": alm_setting,
+                        "devOpsPlatformSettingId": self.alm_setting,
                         "repositoryIdentifier": str(gitlab_project_id),
                         "monorepo": False,
                     },

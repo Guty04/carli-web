@@ -1,5 +1,5 @@
 from .logfire import ERROR_ALERT_QUERY, LogfireClient
-from .schemas import LogfireAlertConfiguration, LogfireChannel, LogfireProject
+from .schemas import LogfireAlertConfiguration, LogfireChannel, LogfireProject, LogfireWriteToken
 
 __all__: list[str] = [
     "ERROR_ALERT_QUERY",
@@ -7,4 +7,5 @@ __all__: list[str] = [
     "LogfireChannel",
     "LogfireClient",
     "LogfireProject",
+    "LogfireWriteToken",
 ]

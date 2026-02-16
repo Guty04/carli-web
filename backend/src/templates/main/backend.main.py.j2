@@ -11,17 +11,20 @@ from scalar_fastapi import get_scalar_api_reference  # type: ignore
 from src.configurations.configuration import configuration
 from src.enums.environment import Environment
 
-logfire.configure()
+logfire.configure(service_name=configuration.APP_NAME)
 
 app = FastAPI(
     title=configuration.APP_NAME,
     description="API for {{ project_name }}",
     version="0.0.1",
-    docs_url="/swagger" if configuration.ENVIRONMENT == Environment.DEVELOPMENT else None,
-    redoc_url="/redoc" if configuration.ENVIRONMENT == Environment.DEVELOPMENT else None,
-    openapi_url="/openapi.json" if configuration.ENVIRONMENT == Environment.DEVELOPMENT else None,
+    docs_url="/swagger" if configuration.ENVIRONMENT not in [Environment.PRODUCTION, Environment.STAGING] else None,
+    redoc_url="/redoc" if configuration.ENVIRONMENT not in [Environment.PRODUCTION, Environment.STAGING] else None,
+    openapi_url="/openapi.json"
+    if configuration.ENVIRONMENT not in [Environment.PRODUCTION, Environment.STAGING]
+    else None,
     dependencies=[Depends(dependency=RateLimiter(limiter=Limiter(argument=Rate(limit=200, interval=Duration.MINUTE))))],
 )
+
 
 logfire.instrument_fastapi(app)
 logfire.instrument_httpx(capture_all=True)
@@ -45,7 +48,7 @@ async def root() -> dict[str, str]:
     return {"message": f"Welcome to {configuration.APP_NAME}"}
 
 
-if configuration.ENVIRONMENT == Environment.DEVELOPMENT:
+if configuration.ENVIRONMENT not in [Environment.PRODUCTION, Environment.STAGING]:
 
     @app.get("/docs", include_in_schema=False)
     async def scalar_docs() -> HTMLResponse:

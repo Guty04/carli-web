@@ -9,3 +9,4 @@ class BuilderProjectData(BaseModel):
     description: str
     url_repository: str
     codeowners: list[Member]
+    logfire_url: str | None = None

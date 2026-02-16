@@ -2,9 +2,10 @@ from uuid import UUID
 
 from sqlalchemy import UUID as SQLUUID
 from sqlalchemy import ForeignKey, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
+from .integration import Integration
 
 
 class Project(Base):
@@ -24,7 +25,8 @@ class Project(Base):
     )
     description: Mapped[str] = mapped_column(String(500), comment="Project description for README")
     url_repository: Mapped[str] = mapped_column(String(500), comment="SSH clone URL from GitLab")
-    id_project_logfire: Mapped[UUID] = mapped_column(SQLUUID(as_uuid=True), comment="Logfire project UUID")
-    id_project_gitlab: Mapped[int] = mapped_column(unique=True, comment="GitLab project ID")
-    id_project_jira: Mapped[int] = mapped_column(unique=True, comment="Jira project ID")
     web_domain: Mapped[str | None] = mapped_column(String(), nullable=True, comment="Web domain for the server.")
+
+    integrations: Mapped[set[Integration]] = relationship(
+        cascade="all, delete-orphan",
+    )

@@ -9,6 +9,4 @@ class Permission(Base):
     __table_args__ = {"comment": "Available permissions in the platform"}
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(
-        String(100), unique=True, comment="Permission identifier (e.g. create_project)"
-    )
+    name: Mapped[str] = mapped_column(String(100), unique=True, comment="Permission identifier (e.g. create_project)")

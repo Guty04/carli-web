@@ -6,6 +6,11 @@ from .gitlab import (
     GitLabError,
     GitLabNotFoundError,
 )
+from .infisical import (
+    InfisicalAPIError,
+    InfisicalAuthenticationError,
+    InfisicalError,
+)
 from .jira import JiraAPIError, JiraAuthenticationError, JiraError
 from .logfire import (
     LogfireAPIError,
@@ -29,6 +34,9 @@ __all__: list[str] = [
     "GitLabAuthenticationError",
     "GitLabError",
     "GitLabNotFoundError",
+    "InfisicalAPIError",
+    "InfisicalAuthenticationError",
+    "InfisicalError",
     "JiraAPIError",
     "JiraAuthenticationError",
     "JiraError",

@@ -29,6 +29,7 @@ dependencies = [
 dev = [
     "alembic>=1.17.2",
     "fastapi[standard]>=0.121.2",
+    "infisicalsdk>=1.0.15",
     "locust>=2.42.0",
     "mypy>=1.19.1",
     "pre-commit>=4.5.0",

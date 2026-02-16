@@ -6,10 +6,7 @@ from src.enums.environment import Environment
 
 class Configuration(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=False,
-        extra="ignore",
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore", frozen=True
     )
     APP_NAME: str
     ENVIRONMENT: Environment = Environment.DEVELOPMENT
@@ -32,6 +29,9 @@ class Configuration(BaseSettings):
     GEMINI_API_KEY: str
     GEMINI_MODEL: str
     WEBHOOK_BASE_URL: HttpUrl
+    INFISICAL_API_URL: HttpUrl
+    INFISICAL_CLIENT_ID: str
+    INFISICAL_SECRET_ID: str
 
 
 configuration = Configuration()  # type:ignore

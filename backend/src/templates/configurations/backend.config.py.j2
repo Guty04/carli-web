@@ -1,7 +1,36 @@
+from os import environ, getenv
+
 from pydantic import PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.enums.environment import Environment
+
+if getenv("ENVIRONMENT") == Environment.DEVELOPMENT.value:
+    try:
+        from infisical_sdk import InfisicalSDKClient
+
+        infisical_client_id = getenv("INFISICAL_CLIENT_ID")
+        infisical_client_secret = getenv("INFISICAL_CLIENT_SECRET")
+        infisical_project_id = getenv("INFISICAL_PROJECT_ID")
+
+        if infisical_client_id and infisical_client_secret and infisical_project_id:
+            client = InfisicalSDKClient(
+                host=getenv("INFISICAL_HOST", "http://localhost:8081"),
+            )
+
+            client.auth.universal_auth.login(
+                client_id=infisical_client_id,
+                client_secret=infisical_client_secret,
+            )
+
+            secrets = client.secrets.list_secrets(
+                project_id=infisical_project_id,
+                environment_slug="dev",
+                secret_path="/",
+            )
+
+            for secret in secrets.secrets:
+                environ[secret.secretKey] = secret.secretValue
 
 
 class Configuration(BaseSettings):
@@ -10,11 +39,12 @@ class Configuration(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+        frozen=True,
     )
     APP_NAME: str = "{{ project_name }}"
-    ENVIRONMENT: Environment = Environment.DEVELOPMENT
-    DATABASE_URL: PostgresDsn = PostgresDsn(f"postgresql+asyncpg://user:password@localhost:5432/{APP_NAME}")
-    SECRET_KEY: str = "change-me-in-production"
+    ENVIRONMENT: Environment
+    DATABASE_URL: PostgresDsn
+    SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRES: int = 30
     LOGFIRE_TOKEN: str | None = None

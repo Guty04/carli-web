@@ -103,3 +103,5 @@ uv.lock
 
 # Alembic
 alembic/versions/*.pyc
+
+*.env

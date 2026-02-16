@@ -149,6 +149,23 @@ class LogfireClient:
         except RequestError as e:
             raise LogfireAPIError(f"Request failed: {e!s}") from e
 
+    async def delete_project(self, project_id: str) -> None:
+        url: str = urljoin(base=self.base_url, url=f"v1/projects/{project_id}/")
+
+        try:
+            async with AsyncClient(timeout=self.timeout) as client:
+                response: Response = await client.delete(
+                    url=url,
+                    headers=self._headers(),
+                )
+                response.raise_for_status()
+
+        except HTTPStatusError as e:
+            raise self._handle_http_error(e) from e
+
+        except RequestError as e:
+            raise LogfireAPIError(f"Request failed: {e!s}") from e
+
     def _headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.token}"}
 

@@ -1,7 +1,7 @@
 from enum import StrEnum, auto
 
 
-class Integrations(StrEnum):
+class ExternalSystem(StrEnum):
     BASE_UNICA = auto()
     SAM = auto()
     INTEROPERABILIDAD = auto()

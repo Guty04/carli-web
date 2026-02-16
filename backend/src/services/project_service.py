@@ -1,4 +1,5 @@
 import asyncio
+import secrets
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -6,10 +7,12 @@ import logfire
 from httpx import AsyncClient, Response
 
 from src.builders import TemplateInterfaceBuilder
-from src.database.models import Project
+from src.database.models import Integration, Project
 from src.enums import Environment
+from src.enums import Integration as IntegrationEnum
 from src.errors import (
     GitLabError,
+    InfisicalError,
     JiraError,
     LogfireError,
     ProjectAlreadyExistsError,
@@ -17,10 +20,11 @@ from src.errors import (
     SonarQubeError,
 )
 from src.integrations.gitlab import AccessLevel, GitLabClient, GitLabMember, GitLabProject
+from src.integrations.infisical import InfisicalClient, InfisicalProject
 from src.integrations.jira import JiraClient, JiraProject
-from src.integrations.logfire import ERROR_ALERT_QUERY, LogfireChannel, LogfireClient, LogfireProject
+from src.integrations.logfire import ERROR_ALERT_QUERY, LogfireChannel, LogfireClient, LogfireProject, LogfireWriteToken
 from src.integrations.sonarqube import QualityGateStatus, SonarQubeClient, SonarQubeToken
-from src.repositories import ProjectRepository
+from src.repositories import IntegrationRepository, ProjectRepository
 from src.schemas import (
     BuilderProjectData,
     Member,
@@ -47,10 +51,11 @@ class ProjectService:
     sonarqube: SonarQubeClient
     logfire: LogfireClient
     jira: JiraClient
+    infisical: InfisicalClient
     repository: ProjectRepository
+    integration_repository: IntegrationRepository
     template_builder: TemplateInterfaceBuilder
     webhook_base_url: str
-    sonarqube_alm_setting: str
 
     async def create_project(self, project: ProjectDetail, user_id: UUID) -> ProjectCreated:
         existing: Project | None = await self.repository.get_by_name(project.name)
@@ -60,14 +65,25 @@ class ProjectService:
 
         project_key: str = slugify(project.name)
         gitlab_project: GitLabProject = await self._setup_gitlab_project(project=project, project_key=project_key)
-        jira_project: JiraProject | None = None
+        infisical_project: InfisicalProject | None = None
         sonarqube_created: bool = False
+        logfire_project: LogfireProject | None = None
+        jira_project: JiraProject | None = None
 
         try:
-            jira_project = await self._setup_jira_project(
-                project_key=project_key,
+            logfire_project = await self._setup_logfire_project(
+                project_name=project.name,
+                description=project.description,
+            )
+
+            infisical_project = await self._setup_infisical_project(
                 project_name=project.name,
                 project_description=project.description,
+            )
+
+            await self._setup_envs(
+                infisical_project_id=infisical_project.id,
+                logfire_project_id=logfire_project.id,
             )
 
             sonarqube_token: SonarQubeToken = await self._setup_sonarqube_project(
@@ -83,30 +99,55 @@ class ProjectService:
                 value=sonarqube_token.token,
             )
 
-            logfire_project: LogfireProject = await self._setup_logfire_project(
+            jira_project = await self._setup_jira_project(
+                project_key=project_key,
                 project_name=project.name,
-                description=project.description,
+                project_description=project.description,
             )
 
             db_project: Project = await self.repository.create(
                 name=project.name,
                 description=project.description,
                 id_user=user_id,
-                id_project_gitlab=gitlab_project.id,
                 url_repository=gitlab_project.ssh_url_to_repo,
-                id_project_logfire=str(logfire_project.id),
-                id_project_jira=jira_project.id,
+            )
+
+            db_project.integrations.update(
+                [
+                    Integration(
+                        project_id=db_project.id,
+                        name=IntegrationEnum.GITLAB,
+                        external_id=str(gitlab_project.id),
+                    ),
+                    Integration(
+                        project_id=db_project.id,
+                        name=IntegrationEnum.INFISICAL,
+                        external_id=infisical_project.id,
+                    ),
+                    Integration(
+                        project_id=db_project.id,
+                        name=IntegrationEnum.LOGFIRE,
+                        external_id=str(logfire_project.id),
+                    ),
+                    Integration(
+                        project_id=db_project.id,
+                        name=IntegrationEnum.JIRA,
+                        external_id=str(jira_project.id),
+                    ),
+                ]
             )
 
             return ProjectCreated(repo_url=gitlab_project.ssh_url_to_repo, project_id=db_project.id)
 
-        except (JiraError, SonarQubeError, LogfireError) as e:
+        except (InfisicalError, LogfireError, SonarQubeError, JiraError) as e:
             logfire.error("Project creation failed, rolling back: {error}", error=str(e))
             await self._rollback_project_creation(
                 gitlab_project_id=gitlab_project.id,
                 gitlab_full_path=gitlab_project.path_with_namespace,
                 project_key=project_key if sonarqube_created else None,
                 jira_project_key=jira_project.key if jira_project else None,
+                logfire_project_id=str(logfire_project.id) if logfire_project else None,
+                infisical_project_id=infisical_project.id if infisical_project else None,
             )
             raise
 
@@ -116,6 +157,8 @@ class ProjectService:
         gitlab_full_path: str,
         project_key: str | None = None,
         jira_project_key: str | None = None,
+        logfire_project_id: str | None = None,
+        infisical_project_id: str | None = None,
     ) -> None:
         try:
             await self.gitlab.delete_project(project_id=gitlab_project_id, full_path=gitlab_full_path)
@@ -127,6 +170,18 @@ class ProjectService:
                 await self.sonarqube.delete_project(project_key=project_key)
             except SonarQubeError:
                 logfire.error("Failed to rollback SonarQube project {key}", key=project_key)
+
+        if logfire_project_id:
+            try:
+                await self.logfire.delete_project(project_id=logfire_project_id)
+            except LogfireError:
+                logfire.error("Failed to rollback Logfire project {id}", id=logfire_project_id)
+
+        if infisical_project_id:
+            try:
+                await self.infisical.delete_project(project_id=infisical_project_id)
+            except InfisicalError:
+                logfire.error("Failed to rollback Infisical project {id}", id=infisical_project_id)
 
         if jira_project_key:
             try:
@@ -141,6 +196,8 @@ class ProjectService:
             initialize_with_readme=False,
         )
 
+        logfire_url: str = f"{self.logfire.base_url}Guty04/{logfire_slug(project.name)}"
+
         files: dict[str, str] = self.template_builder.build(
             data=BuilderProjectData(
                 project_name=project.name,
@@ -148,6 +205,7 @@ class ProjectService:
                 description=project.description,
                 url_repository=gitlab_project.ssh_url_to_repo,
                 codeowners=project.members,
+                logfire_url=logfire_url,
             ),
         )
 
@@ -181,13 +239,36 @@ class ProjectService:
         await self.sonarqube.set_gitlab_binding(
             project_name=project_name,
             project_key=project_key,
-            alm_setting=self.sonarqube_alm_setting,
             gitlab_project_id=gitlab_project_id,
         )
         return await self.sonarqube.generate_project_token(
             project_key=project_key,
             token_name=f"{project_key}-token",
         )
+
+    async def _setup_envs(
+        self,
+        infisical_project_id: str,
+        logfire_project_id: UUID,
+    ) -> None:
+        logfire_write_token: LogfireWriteToken = await self.logfire.create_write_token(
+            project_id=str(logfire_project_id)
+        )
+
+        secrets_data: dict[str, str] = {
+            "JWT_ALGORITHM": "HS256",
+            "SECRET_KEY": secrets.token_urlsafe(32),
+            "ENVIRONMENT": "local",
+            "LOGFIRE_TOKEN": logfire_write_token.token,
+        }
+
+        for key, value in secrets_data.items():
+            await self.infisical.create_secret(
+                project_id=infisical_project_id,
+                environment="Local",
+                secret_key=key,
+                secret_value=value,
+            )
 
     async def _setup_logfire_project(self, project_name: str, description: str) -> LogfireProject:
         logfire_project: LogfireProject = await self.logfire.create_project(
@@ -211,6 +292,46 @@ class ProjectService:
         )
 
         return logfire_project
+
+    async def _setup_infisical_project(
+        self,
+        project_name: str,
+        project_description: str,
+    ) -> InfisicalProject:
+        infisical_project: InfisicalProject = await self.infisical.create_project(
+            project_name=f"{project_name} secrets",
+            project_description=project_description,
+        )
+        infisical_project_id: str = infisical_project.id
+
+        await self.infisical.create_environment(
+            project_id=infisical_project_id,
+            name="Local",
+            slug="local",
+            position=1,
+        )
+
+        identity_id: str = await self.infisical.create_identity(
+            name=f"developers-{project_name}-identity",
+            project_id=infisical_project_id,
+        )
+
+        client_secret: str = await self.infisical.create_client_secret(identity_id=identity_id, description="")
+
+        client_id: str = await self.infisical.get_client_id(identity_id=identity_id)
+
+        # TODO: Ya pensaremos como hacer llegar esto a los devs
+        # TODO: Falta agregar permisos para que el TL pueda acceder
+        # a la instancia de infisical y configurar todas las envs
+        logfire.info("Infisical credentials", client_id=client_id, client_secret=client_secret)
+
+        await self.infisical.attach_identity_to_project(
+            identity_id=identity_id,
+            project_id=infisical_project_id,
+            role="viewer",
+        )
+
+        return infisical_project
 
     async def _setup_jira_project(self, project_key: str, project_name: str, project_description: str) -> JiraProject:
         unique_key: str = await self._generate_unique_project_key(project_key)
@@ -258,9 +379,16 @@ class ProjectService:
         if not project or project.id_user != user_id:
             raise ProjectNotFoundError()
 
+        integration: Integration | None = await self.integration_repository.get_by_project_id(
+            project_id=project.id, integration=IntegrationEnum.GITLAB
+        )
+
+        if not integration:
+            raise ProjectNotFoundError()
+
         project_key: str = slugify(project.name)
         quality_gate: QualityGateStatus = await self.sonarqube.get_quality_gate_status(project_key=project_key)
-        members: list[GitLabMember] = await self.gitlab.list_project_members(project_id=project.id_project_gitlab)
+        members: list[GitLabMember] = await self.gitlab.list_project_members(project_id=int(integration.external_id))
         stages: list[StageStatus] = await self._get_stages(domain=project.web_domain)
 
         return ProjectOverview(
