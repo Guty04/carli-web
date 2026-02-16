@@ -20,7 +20,7 @@ from src.errors import (
     SonarQubeError,
 )
 from src.integrations.gitlab import AccessLevel, GitLabClient, GitLabMember, GitLabProject
-from src.integrations.infisical import InfisicalClient, InfisicalProject
+from src.integrations.infisical import InfisicalClient, InfisicalIdentity, InfisicalProject, InfisicalProjectSetup
 from src.integrations.jira import JiraClient, JiraProject
 from src.integrations.logfire import ERROR_ALERT_QUERY, LogfireChannel, LogfireClient, LogfireProject, LogfireWriteToken
 from src.integrations.sonarqube import QualityGateStatus, SonarQubeClient, SonarQubeToken
@@ -65,7 +65,7 @@ class ProjectService:
 
         project_key: str = slugify(project.name)
         gitlab_project: GitLabProject = await self._setup_gitlab_project(project=project, project_key=project_key)
-        infisical_project: InfisicalProject | None = None
+        infisical_setup: InfisicalProjectSetup | None = None
         sonarqube_created: bool = False
         logfire_project: LogfireProject | None = None
         jira_project: JiraProject | None = None
@@ -76,14 +76,19 @@ class ProjectService:
                 description=project.description,
             )
 
-            infisical_project = await self._setup_infisical_project(
+            infisical_setup = await self._setup_infisical_project(
                 project_name=project.name,
                 project_description=project.description,
             )
 
             await self._setup_envs(
-                infisical_project_id=infisical_project.id,
+                infisical_project_id=infisical_setup.project.id,
                 logfire_project_id=logfire_project.id,
+            )
+
+            await self._store_infisical_credentials(
+                gitlab_project_id=gitlab_project.id,
+                infisical_setup=infisical_setup,
             )
 
             sonarqube_token: SonarQubeToken = await self._setup_sonarqube_project(
@@ -117,7 +122,7 @@ class ProjectService:
                     ),
                     Integration(
                         name=IntegrationEnum.INFISICAL,
-                        external_id=infisical_project.id,
+                        external_id=infisical_setup.project.id,
                     ),
                     Integration(
                         name=IntegrationEnum.LOGFIRE,
@@ -139,7 +144,7 @@ class ProjectService:
                 project_key=project_key if sonarqube_created else None,
                 jira_project_key=jira_project.key if jira_project else None,
                 logfire_project_id=str(logfire_project.id) if logfire_project else None,
-                infisical_project_id=infisical_project.id if infisical_project else None,
+                infisical_project_id=infisical_setup.project.id if infisical_setup else None,
             )
             raise
 
@@ -289,7 +294,7 @@ class ProjectService:
         self,
         project_name: str,
         project_description: str,
-    ) -> InfisicalProject:
+    ) -> InfisicalProjectSetup:
         infisical_project: InfisicalProject = await self.infisical.create_project(
             project_name=f"{project_name} secrets",
             project_description=project_description,
@@ -312,18 +317,34 @@ class ProjectService:
 
         client_secret: str = await self.infisical.create_client_secret(identity_id=identity_id, description="")
 
-        # TODO: Ya pensaremos como hacer llegar esto a los devs
-        # TODO: Falta agregar permisos para que el TL pueda acceder
-        # a la instancia de infisical y configurar todas las envs
-        logfire.info("Infisical credentials", client_id=client_id, client_secret=client_secret)
-        # print("ID:" + client_id, "SECRET:" + client_secret, "PROJECT_ID" + infisical_project_id)
-
         await self.infisical.update_identity_membership(
             identity_id=identity_id,
             project_id=infisical_project_id,
         )
 
-        return infisical_project
+        return InfisicalProjectSetup(
+            project=infisical_project,
+            identity=InfisicalIdentity(client_id=client_id, client_secret=client_secret),
+        )
+
+    async def _store_infisical_credentials(
+        self,
+        gitlab_project_id: int,
+        infisical_setup: InfisicalProjectSetup,
+    ) -> None:
+        ci_variables: dict[str, str] = {
+            "INFISICAL_HOST": self.infisical.base_url,
+            "INFISICAL_CLIENT_ID": infisical_setup.identity.client_id,
+            "INFISICAL_CLIENT_SECRET": infisical_setup.identity.client_secret,
+            "INFISICAL_PROJECT_ID": infisical_setup.project.id,
+        }
+
+        for key, value in ci_variables.items():
+            await self.gitlab.create_ci_variable(
+                project_id=gitlab_project_id,
+                key=key,
+                value=value,
+            )
 
     async def _setup_jira_project(self, project_key: str, project_name: str, project_description: str) -> JiraProject:
         unique_key: str = await self._generate_unique_project_key(project_key)

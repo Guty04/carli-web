@@ -22,3 +22,8 @@ class InfisicalProject(_InfisicalBase):
 class InfisicalIdentity(_InfisicalBase):
     client_id: str
     client_secret: str
+
+
+class InfisicalProjectSetup(_InfisicalBase):
+    project: InfisicalProject
+    identity: InfisicalIdentity
