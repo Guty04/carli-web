@@ -34,7 +34,7 @@ class LogfireClient:
         description: str,
         visibility: str = "private",
     ) -> LogfireProject:
-        url: str = urljoin(base=self.base_url, url="v1/projects/")
+        url: str = urljoin(base=self.base_url, url="api/v1/projects/")
 
         try:
             async with AsyncClient(timeout=self.timeout) as client:
@@ -61,7 +61,7 @@ class LogfireClient:
     async def create_write_token(self, project_id: str) -> LogfireWriteToken:
         url: str = urljoin(
             base=self.base_url,
-            url=f"v1/projects/{project_id}/write-tokens/",
+            url=f"api/v1/projects/{project_id}/write-tokens/",
         )
 
         try:
@@ -86,7 +86,7 @@ class LogfireClient:
         label: str,
         webhook_url: str,
     ) -> LogfireChannel:
-        url: str = urljoin(base=self.base_url, url="v1/channels/")
+        url: str = urljoin(base=self.base_url, url="api/v1/channels/")
 
         try:
             async with AsyncClient(timeout=self.timeout) as client:
@@ -119,7 +119,7 @@ class LogfireClient:
     ) -> LogfireAlertConfiguration:
         url: str = urljoin(
             base=self.base_url,
-            url=f"v1/projects/{project_id}/alerts/",
+            url=f"api/v1/projects/{project_id}/alerts/",
         )
 
         try:
@@ -150,7 +150,7 @@ class LogfireClient:
             raise LogfireAPIError(f"Request failed: {e!s}") from e
 
     async def delete_project(self, project_id: str) -> None:
-        url: str = urljoin(base=self.base_url, url=f"v1/projects/{project_id}/")
+        url: str = urljoin(base=self.base_url, url=f"api/v1/projects/{project_id}/")
 
         try:
             async with AsyncClient(timeout=self.timeout) as client:

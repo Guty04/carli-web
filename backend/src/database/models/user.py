@@ -5,7 +5,6 @@ from sqlalchemy import ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
-from .project import Project
 from .role import Role
 
 
@@ -25,7 +24,3 @@ class User(Base):
     id_role: Mapped[int] = mapped_column(ForeignKey("role.id"), comment="FK to assigned role")
 
     role: Mapped[Role] = relationship(lazy="joined")
-    projects: Mapped[set[Project]] = relationship(
-        "Project",
-        primaryjoin="User.id == Project.id_user",
-    )

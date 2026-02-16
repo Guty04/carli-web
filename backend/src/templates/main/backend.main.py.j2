@@ -1,7 +1,7 @@
 """{{ project_name }} - FastAPI Application Entry Point."""
 
 import logfire
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi_limiter.depends import RateLimiter
@@ -11,7 +11,11 @@ from scalar_fastapi import get_scalar_api_reference  # type: ignore
 from src.configurations.configuration import configuration
 from src.enums.environment import Environment
 
-logfire.configure(service_name=configuration.APP_NAME)
+logfire.configure(
+    service_name=configuration.APP_NAME,
+    token=configuration.LOGFIRE_TOKEN,
+    send_to_logfire=Environment.LOCAL == configuration.ENVIRONMENT,
+)
 
 app = FastAPI(
     title=configuration.APP_NAME,
@@ -56,4 +60,5 @@ if configuration.ENVIRONMENT not in [Environment.PRODUCTION, Environment.STAGING
         return get_scalar_api_reference(
             openapi_url=app.openapi_url or "/openapi.json",
             title=app.title,
+            hide_models=True,
         )

@@ -14,11 +14,7 @@ class ProjectRepository:
     session: AsyncSession
 
     async def create(
-        self,
-        name: str,
-        id_user: UUID,
-        url_repository: str,
-        description: str,
+        self, name: str, id_user: UUID, url_repository: str, description: str, integrations: list[Integration]
     ) -> Project:
         project = Project(
             name=name,
@@ -26,6 +22,7 @@ class ProjectRepository:
             id_user=id_user,
             url_repository=url_repository,
         )
+        project.integrations.update(integrations)
         self.session.add(project)
         await self.session.flush()
         return project

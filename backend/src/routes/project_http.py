@@ -6,6 +6,7 @@ from src.database.models import User
 from src.enums import Permission
 from src.errors import (
     GitLabError,
+    InfisicalError,
     JiraError,
     LogfireError,
     ProjectAlreadyExistsError,
@@ -32,7 +33,7 @@ async def create_project(
     except ProjectAlreadyExistsError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
-    except (GitLabError, LogfireError, JiraError, SonarQubeError) as e:
+    except (GitLabError, LogfireError, JiraError, SonarQubeError, InfisicalError) as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),

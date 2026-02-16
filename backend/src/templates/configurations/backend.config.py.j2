@@ -1,36 +1,10 @@
-from os import environ, getenv
+from os import getenv
 
+from dotenv import load_dotenv
 from pydantic import PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.enums.environment import Environment
-
-if getenv("ENVIRONMENT") == Environment.DEVELOPMENT.value:
-    try:
-        from infisical_sdk import InfisicalSDKClient
-
-        infisical_client_id = getenv("INFISICAL_CLIENT_ID")
-        infisical_client_secret = getenv("INFISICAL_CLIENT_SECRET")
-        infisical_project_id = getenv("INFISICAL_PROJECT_ID")
-
-        if infisical_client_id and infisical_client_secret and infisical_project_id:
-            client = InfisicalSDKClient(
-                host=getenv("INFISICAL_HOST", "http://localhost:8081"),
-            )
-
-            client.auth.universal_auth.login(
-                client_id=infisical_client_id,
-                client_secret=infisical_client_secret,
-            )
-
-            secrets = client.secrets.list_secrets(
-                project_id=infisical_project_id,
-                environment_slug="dev",
-                secret_path="/",
-            )
-
-            for secret in secrets.secrets:
-                environ[secret.secretKey] = secret.secretValue
 
 
 class Configuration(BaseSettings):
@@ -41,13 +15,50 @@ class Configuration(BaseSettings):
         extra="ignore",
         frozen=True,
     )
-    APP_NAME: str = "{{ project_name }}"
+    APP_NAME: str = "Formulario"
     ENVIRONMENT: Environment
     DATABASE_URL: PostgresDsn
     SECRET_KEY: str
-    JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRES: int = 30
+    JWT_ALGORITHM: str
+    ACCESS_TOKEN_EXPIRES: int
     LOGFIRE_TOKEN: str | None = None
-    CORS_ORIGIN: list[str] = ["http://localhost:3000"]
+    CORS_ORIGIN: list[str]
 
-configuration = Configuration()  # type:ignore
+
+def _get_secrets() -> dict[str, str]:
+    from infisical_sdk import InfisicalSDKClient, ListSecretsResponse  # type:ignore
+
+    infisical_host: str | None = getenv("INFISICAL_HOST")
+    infisical_client_id: str | None = getenv("INFISICAL_CLIENT_ID")
+    infisical_client_secret: str | None = getenv("INFISICAL_CLIENT_SECRET")
+    infisical_project_id: str | None = getenv("INFISICAL_PROJECT_ID")
+
+    if not infisical_client_id or not infisical_client_secret or not infisical_project_id or not infisical_host:
+        raise ValueError("INFISICAL envs is missing")
+
+    client = InfisicalSDKClient(host=infisical_host)
+
+    client.auth.universal_auth.login(
+        client_id=infisical_client_id,
+        client_secret=infisical_client_secret,
+    )
+
+    secrets: ListSecretsResponse = client.secrets.list_secrets(
+        project_id=infisical_project_id,
+        environment_slug="local",
+        secret_path="/",  # noqa: S106
+    )
+
+    return {secret.secretKey: secret.secretValue for secret in secrets.secrets}
+
+
+def build_configuration() -> Configuration:
+    load_dotenv()
+    secrets = {}
+    if getenv("ENVIRONMENT") == Environment.LOCAL.value:
+        secrets: dict[str, str] = _get_secrets()
+
+    return Configuration(**secrets)  # type:ignore
+
+
+configuration: Configuration = build_configuration()

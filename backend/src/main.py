@@ -10,7 +10,7 @@ from src.configurations import configuration
 from src.enums import Environment
 from src.routes import auth_router, project_router, user_router, webhook_router
 
-logfire.configure(service_name=configuration.APP_NAME)
+logfire.configure(service_name=configuration.APP_NAME, send_to_logfire=Environment.LOCAL == configuration.ENVIRONMENT)
 
 
 app = FastAPI(
@@ -28,6 +28,7 @@ app = FastAPI(
 
 logfire.instrument_fastapi(app)
 logfire.instrument_httpx(capture_all=True)
+logfire.instrument_sqlalchemy(enable_commenter=True)
 
 app.add_middleware(
     CORSMiddleware,

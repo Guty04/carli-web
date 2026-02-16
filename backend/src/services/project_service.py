@@ -110,33 +110,25 @@ class ProjectService:
                 description=project.description,
                 id_user=user_id,
                 url_repository=gitlab_project.ssh_url_to_repo,
-            )
-
-            db_project.integrations.update(
-                [
+                integrations=[
                     Integration(
-                        project_id=db_project.id,
                         name=IntegrationEnum.GITLAB,
                         external_id=str(gitlab_project.id),
                     ),
                     Integration(
-                        project_id=db_project.id,
                         name=IntegrationEnum.INFISICAL,
                         external_id=infisical_project.id,
                     ),
                     Integration(
-                        project_id=db_project.id,
                         name=IntegrationEnum.LOGFIRE,
                         external_id=str(logfire_project.id),
                     ),
                     Integration(
-                        project_id=db_project.id,
                         name=IntegrationEnum.JIRA,
                         external_id=str(jira_project.id),
                     ),
-                ]
+                ],
             )
-
             return ProjectCreated(repo_url=gitlab_project.ssh_url_to_repo, project_id=db_project.id)
 
         except (InfisicalError, LogfireError, SonarQubeError, JiraError) as e:
@@ -196,7 +188,7 @@ class ProjectService:
             initialize_with_readme=False,
         )
 
-        logfire_url: str = f"{self.logfire.base_url}Guty04/{logfire_slug(project.name)}"
+        logfire_url: str = f"{self.logfire.base_url}guty04/{logfire_slug(project.name)}"
 
         files: dict[str, str] = self.template_builder.build(
             data=BuilderProjectData(
@@ -255,8 +247,9 @@ class ProjectService:
             project_id=str(logfire_project_id)
         )
 
-        secrets_data: dict[str, str] = {
+        secrets_data: dict[str, str | int] = {
             "JWT_ALGORITHM": "HS256",
+            "ACCESS_TOKEN_EXPIRES": 30,
             "SECRET_KEY": secrets.token_urlsafe(32),
             "ENVIRONMENT": "local",
             "LOGFIRE_TOKEN": logfire_write_token.token,
@@ -265,7 +258,7 @@ class ProjectService:
         for key, value in secrets_data.items():
             await self.infisical.create_secret(
                 project_id=infisical_project_id,
-                environment="Local",
+                environment="local",
                 secret_key=key,
                 secret_value=value,
             )
@@ -275,7 +268,6 @@ class ProjectService:
             project_name=logfire_slug(project_name),
             description=description,
         )
-        await self.logfire.create_write_token(project_id=str(logfire_project.id))
 
         webhook_url: str = f"{self.webhook_base_url}webhooks/logfire/alerts"
         channel: LogfireChannel = await self.logfire.create_channel(
@@ -316,19 +308,19 @@ class ProjectService:
             project_id=infisical_project_id,
         )
 
-        client_secret: str = await self.infisical.create_client_secret(identity_id=identity_id, description="")
+        client_id: str = await self.infisical.configure_universal_auth(identity_id=identity_id)
 
-        client_id: str = await self.infisical.get_client_id(identity_id=identity_id)
+        client_secret: str = await self.infisical.create_client_secret(identity_id=identity_id, description="")
 
         # TODO: Ya pensaremos como hacer llegar esto a los devs
         # TODO: Falta agregar permisos para que el TL pueda acceder
         # a la instancia de infisical y configurar todas las envs
         logfire.info("Infisical credentials", client_id=client_id, client_secret=client_secret)
+        # print("ID:" + client_id, "SECRET:" + client_secret, "PROJECT_ID" + infisical_project_id)
 
-        await self.infisical.attach_identity_to_project(
+        await self.infisical.update_identity_membership(
             identity_id=identity_id,
             project_id=infisical_project_id,
-            role="viewer",
         )
 
         return infisical_project

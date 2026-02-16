@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, field
 from urllib.parse import urljoin
 
 from httpx import AsyncClient, HTTPStatusError, RequestError, Response
@@ -19,9 +20,17 @@ class InfisicalClient:
     client_secret: str
     token: str | None = None
     timeout: int = 30
+    _token_expires_at: float = field(default=0.0, init=False, repr=False)
 
     def _headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.token}"}
+
+    def _is_token_valid(self) -> bool:
+        return self.token is not None and time.time() < self._token_expires_at
+
+    async def _ensure_token(self) -> None:
+        if not self._is_token_valid():
+            await self._authenticate()
 
     @staticmethod
     def _handle_http_error(error: HTTPStatusError) -> InfisicalError:
@@ -31,7 +40,7 @@ class InfisicalClient:
             return InfisicalAPIError("Resource not found")
         return InfisicalAPIError(f"HTTP {error.response.status_code}")
 
-    async def get_token(self) -> str:
+    async def _authenticate(self) -> str:
         url: str = urljoin(self.base_url, "api/v1/auth/universal-auth/login")
 
         headers: dict[str, str] = {"Content-Type": "application/x-www-form-urlencoded"}
@@ -43,9 +52,11 @@ class InfisicalClient:
                 )
                 response.raise_for_status()
 
-                access_token = response.json()["accessToken"]
-
+                data = response.json()
+                access_token: str = data["accessToken"]
+                expires_in: int = data["expiresIn"]
                 self.token = access_token
+                self._token_expires_at = time.time() + expires_in - 30
 
                 return access_token
 
@@ -60,6 +71,7 @@ class InfisicalClient:
         project_name: str,
         project_description: str,
     ) -> InfisicalProject:
+        await self._ensure_token()
         url: str = urljoin(self.base_url, "api/v2/workspace")
 
         try:
@@ -90,6 +102,7 @@ class InfisicalClient:
         slug: str,
         position: int = 1,
     ) -> None:
+        await self._ensure_token()
         url: str = urljoin(self.base_url, f"api/v1/projects/{project_id}/environments")
 
         try:
@@ -111,6 +124,7 @@ class InfisicalClient:
         name: str,
         project_id: str,
     ) -> str:
+        await self._ensure_token()
         url: str = urljoin(self.base_url, f"api/v1/projects/{project_id}/identities")
 
         try:
@@ -128,7 +142,41 @@ class InfisicalClient:
         except RequestError as e:
             raise InfisicalAPIError(f"Request failed: {str(e)}") from e
 
+    async def configure_universal_auth(self, identity_id: str) -> str:
+        await self._ensure_token()
+        url: str = urljoin(
+            self.base_url,
+            f"api/v1/auth/universal-auth/identities/{identity_id}",
+        )
+
+        try:
+            async with AsyncClient(timeout=self.timeout) as client:
+                response: Response = await client.post(
+                    url=url,
+                    json={
+                        "clientSecretTrustedIps": [{"ipAddress": "0.0.0.0/0"}, {"ipAddress": "::/0"}],
+                        "accessTokenTrustedIps": [{"ipAddress": "0.0.0.0/0"}, {"ipAddress": "::/0"}],
+                        "accessTokenTTL": 2592000,
+                        "accessTokenMaxTTL": 2592000,
+                        "accessTokenNumUsesLimit": 0,
+                        "accessTokenPeriod": 0,
+                        "lockoutEnabled": True,
+                        "lockoutThreshold": 3,
+                        "lockoutDurationSeconds": 300,
+                        "lockoutCounterResetSeconds": 30,
+                    },
+                    headers=self._headers(),
+                )
+                response.raise_for_status()
+                return response.json()["identityUniversalAuth"]["clientId"]
+
+        except HTTPStatusError as e:
+            raise self._handle_http_error(e) from e
+        except RequestError as e:
+            raise InfisicalAPIError(f"Request failed: {str(e)}") from e
+
     async def create_client_secret(self, identity_id: str, description: str) -> str:
+        await self._ensure_token()
         url: str = urljoin(
             self.base_url,
             f"api/v1/auth/universal-auth/identities/{identity_id}/client-secrets",
@@ -152,43 +200,23 @@ class InfisicalClient:
         except RequestError as e:
             raise InfisicalAPIError(f"Request failed: {str(e)}") from e
 
-    async def get_client_id(self, identity_id: str) -> str:
-        url: str = urljoin(
-            self.base_url,
-            f"api/v1/auth/universal-auth/identities/{identity_id}",
-        )
-
-        try:
-            async with AsyncClient(timeout=self.timeout) as client:
-                response: Response = await client.get(
-                    url=url,
-                    headers=self._headers(),
-                )
-                response.raise_for_status()
-
-                return response.json()["identityUniversalAuth"]["clientId"]
-
-        except HTTPStatusError as e:
-            raise self._handle_http_error(e) from e
-        except RequestError as e:
-            raise InfisicalAPIError(f"Request failed: {str(e)}") from e
-
-    async def attach_identity_to_project(
+    async def update_identity_membership(
         self,
         identity_id: str,
         project_id: str,
         role: str = "viewer",
     ) -> None:
+        await self._ensure_token()
         url: str = urljoin(
             self.base_url,
-            f"api/v1/projects/{project_id}/identity-memberships/{identity_id}",
+            f"api/v1/projects/{project_id}/memberships/identities/{identity_id}",
         )
 
         try:
             async with AsyncClient(timeout=self.timeout) as client:
-                response: Response = await client.post(
+                response: Response = await client.patch(
                     url=url,
-                    json={"role": role},
+                    json={"roles": [{"role": role, "isTemporary": False}]},
                     headers=self._headers(),
                 )
                 response.raise_for_status()
@@ -203,9 +231,10 @@ class InfisicalClient:
         project_id: str,
         environment: str,
         secret_key: str,
-        secret_value: str,
+        secret_value: str | int,
         secret_path: str = "/",  # noqa: S107
     ) -> None:
+        await self._ensure_token()
         url: str = urljoin(self.base_url, f"api/v3/secrets/raw/{secret_key}")
 
         try:
@@ -228,7 +257,8 @@ class InfisicalClient:
             raise InfisicalAPIError(f"Request failed: {str(e)}") from e
 
     async def delete_project(self, project_id: str) -> None:
-        url = urljoin(self.base_url, f"api/v1/projects/{project_id}")
+        await self._ensure_token()
+        url: str = urljoin(self.base_url, f"api/v1/projects/{project_id}")
 
         try:
             async with AsyncClient(timeout=self.timeout) as client:
