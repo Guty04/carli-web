@@ -15,6 +15,7 @@ Add your project description here.
 - [uv](https://docs.astral.sh/uv/)
 - [pre-commit](https://pre-commit.com/)
 - [GGA](https://github.com/Gentleman-Programming/gentleman-guardian-angel) (Gentleman Guardian Angel)
+- [Docker](https://docs.docker.com/get-docker/) y [Docker Compose](https://docs.docker.com/compose/install/)
 
 ## Installation
 
@@ -40,6 +41,20 @@ uv tool install pre-commit
 git clone https://github.com/Gentleman-Programming/gentleman-guardian-angel.git
 cd gga
 ./install.sh
+```
+
+### Docker
+
+```bash
+# Linux/macOS
+curl -fsSL https://get.docker.com | sh
+
+# Windows
+# Descargar Docker Desktop desde https://docs.docker.com/desktop/install/windows/
+
+# Verificar instalación
+docker --version
+docker compose version
 ```
 
 ## Quick Start
